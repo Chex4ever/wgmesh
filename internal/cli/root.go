@@ -19,9 +19,7 @@ func Execute() {
 		Short: "wgmesh — менеджер WireGuard mesh-сетей (multihop exit-маршруты)",
 		Long: `wgmesh управляет одноранговой mesh-сетью из WireGuard-нод
 (Linux / Mikrotik / OpenWRT): YAML-конфиги в Git, маршруты через
-несколько хопов, один бинарник без центрального сервера.
-
-См. Plan-001.md для архитектуры и roadmap.`,
+несколько хопов, один бинарник без центрального сервера.`,
 		SilenceUsage:  true,
 		SilenceErrors: true,
 	}

@@ -1,5 +1,5 @@
-# Пример главного конфига mesh-сети (см. Plan-001.md, раздел «Конфигурация»).
-# Ключи private_key/public_key и mesh_ip заполняются автоматически при `meshctl apply`.
+# Пример главного конфига mesh-сети.
+# Ключи private_key/public_key и mesh_ip заполняются автоматически при `wgmesh apply`.
 name: "My Mesh Network"
 version: 1
 cidr: 10.66.0.0/24
