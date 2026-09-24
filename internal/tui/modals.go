@@ -14,7 +14,7 @@ func renderModalOverlay(m Model) string {
 	case ModalHelp:
 		body = renderHelpContent()
 	case ModalBootstrapNode:
-		body = renderFormModal("🚀 Zero-Touch Bootstrap Ноды", m.Modal)
+		body = renderFormModal("🚀 Zero-Touch SSH Bootstrap Ноды", m.Modal)
 	case ModalAddNode:
 		body = renderFormModal("➕ Добавление Ноды", m.Modal)
 	case ModalAddRoute:
@@ -78,22 +78,32 @@ func renderFormModal(title string, state ModalState) string {
 
 	for i, f := range state.Fields {
 		val := f.Value
-		if f.Mask {
+		if len(f.Options) > 0 {
+			if f.OptionIdx >= 0 && f.OptionIdx < len(f.Options) {
+				val = fmt.Sprintf("◄ %s ►  (стрелки ←/→)", f.Options[f.OptionIdx])
+			}
+		} else if f.Mask {
 			val = strings.Repeat("*", len(f.Value))
-		}
-		if val == "" && f.Placeholder != "" {
+		} else if val == "" && f.Placeholder != "" {
 			val = lipgloss.NewStyle().Foreground(lipgloss.Color("242")).Render(f.Placeholder)
 		}
 
 		if i == state.ActiveField {
-			sb.WriteString(activeFieldStyle.Render(fmt.Sprintf("► %-18s: [%s_]", f.Label, val)) + "\n")
+			if len(f.Options) > 0 {
+				sb.WriteString(activeFieldStyle.Render(fmt.Sprintf("► %-24s: %s", f.Label, val)) + "\n")
+			} else {
+				sb.WriteString(activeFieldStyle.Render(fmt.Sprintf("► %-24s: [%s_]", f.Label, val)) + "\n")
+			}
 		} else {
-			sb.WriteString(fieldLabelStyle.Render(fmt.Sprintf("  %-18s: %s", f.Label, val)) + "\n")
+			if len(f.Options) > 0 && f.OptionIdx >= 0 && f.OptionIdx < len(f.Options) {
+				val = f.Options[f.OptionIdx]
+			}
+			sb.WriteString(fieldLabelStyle.Render(fmt.Sprintf("  %-24s: %s", f.Label, val)) + "\n")
 		}
 	}
 
 	sb.WriteString("\n" + lipgloss.NewStyle().Foreground(lipgloss.Color("243")).Render(
-		"[Tab/↓] Следующее поле | [Enter] Подтвердить | [Esc] Отмена",
+		"[Tab/↓] Следующее поле | [←/→] Выбор варианта | [Enter] Подтвердить | [Esc] Отмена",
 	))
 
 	return sb.String()
@@ -176,9 +186,9 @@ func renderGitModal(state ModalState) string {
 			val = lipgloss.NewStyle().Foreground(lipgloss.Color("242")).Render(f.Placeholder)
 		}
 		if i == state.ActiveField {
-			sb.WriteString(activeFieldStyle.Render(fmt.Sprintf("► %-18s: [%s_]", f.Label, val)) + "\n")
+			sb.WriteString(activeFieldStyle.Render(fmt.Sprintf("► %-24s: [%s_]", f.Label, val)) + "\n")
 		} else {
-			sb.WriteString(fieldLabelStyle.Render(fmt.Sprintf("  %-18s: %s", f.Label, val)) + "\n")
+			sb.WriteString(fieldLabelStyle.Render(fmt.Sprintf("  %-24s: %s", f.Label, val)) + "\n")
 		}
 	}
 
@@ -196,10 +206,10 @@ func renderHelpContent() string {
   [+] / [-]             — Быстрое добавление/удаление хопа в цепочке маршрута
 
 Команды управления:
-  [b]                   — 🚀 Zero-Touch SSH Bootstrap новой ноды
-  [n]                   — ➕ Добавить ноду вручную
+  [b]                   — 🚀 Zero-Touch SSH Bootstrap новой ноды (с автоподключением по паролю)
+  [n]                   — ➕ Добавить ноду в конфиг
   [r]                   — ➕ Создать новый exit-маршрут
-  [c]                   — 👤 Добавить клиента
+  [c]                   — 👤 Добавить клиента (с интерактивным выбором ноды подключения)
   [l]                   — 🌐 Добавить список доменов/IP (Split Tunneling)
   [e]                   — ✏️ Изменить выбранный маршрут
   [Del] / [x]           — 🗑️ Удалить выбранный узел / маршрут / клиент

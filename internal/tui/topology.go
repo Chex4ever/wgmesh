@@ -33,9 +33,23 @@ var (
 // RenderTopology строит ASCII-визуализацию маршрутов и топологии сети.
 func RenderTopology(m *config.Mesh, activeRouteIdx int, width int) string {
 	if len(m.Routes) == 0 {
+		if len(m.Nodes) == 0 {
+			return lipgloss.NewStyle().
+				Foreground(lipgloss.Color("214")).
+				Render(
+					"💡 Карта топологии пока пуста. Для старта:\n" +
+						"   1. Нажмите [b] для подключения первого сервера/роутера по SSH (Bootstrap)\n" +
+						"   2. Нажмите [r] для создания первого exit-маршрута\n" +
+						"   3. Нажмите [a] для быстрой настройки узлов по SSH (Apply)",
+				)
+		}
 		return lipgloss.NewStyle().
-			Foreground(lipgloss.Color("242")).
-			Render(" (Нет настроенных маршрутов. Нажмите '+' для создания) ")
+			Foreground(lipgloss.Color("86")).
+			Render(
+				"💡 Узлы добавлены, но маршруты еще не настроены:\n" +
+					"   1. Нажмите [r] для создания первого маршрута через узел\n" +
+					"   2. Нажмите [a] для применения конфигурации по SSH",
+			)
 	}
 
 	var sb strings.Builder

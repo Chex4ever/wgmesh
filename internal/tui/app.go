@@ -57,6 +57,8 @@ type FormField struct {
 	Value       string
 	Placeholder string
 	Mask        bool
+	Options     []string
+	OptionIdx   int
 }
 
 type ModalState struct {
@@ -232,7 +234,11 @@ func (m *Model) moveSelection(delta int) {
 }
 
 func (m *Model) addHopToSelectedRoute() {
-	if len(m.Mesh.Routes) > 0 && len(m.Mesh.Nodes) > 0 {
+	if len(m.Mesh.Nodes) == 0 {
+		m.LogMsg = "ℹ️ Для создания маршрута сначала добавьте хотя бы один сервер/роутер (нажмите 'b' для Bootstrap или 'n')"
+		return
+	}
+	if len(m.Mesh.Routes) > 0 {
 		r := &m.Mesh.Routes[m.SelectedRoute]
 		if r.Protected {
 			m.LogMsg = fmt.Sprintf("⚠️ Маршрут %q защищён (protected: true) — редактирование запрещено", r.Name)
@@ -243,6 +249,8 @@ func (m *Model) addHopToSelectedRoute() {
 		r.ExitNode = nodeToAdd
 		m.IsDirty = true
 		m.LogMsg = fmt.Sprintf("✔ Добавлен хоп %s в маршрут %s", nodeToAdd, r.Name)
+	} else {
+		m.openAddRouteModal()
 	}
 }
 
@@ -264,6 +272,22 @@ func (m *Model) removeHopFromSelectedRoute() {
 }
 
 func (m *Model) handleModalKey(key string) (Model, tea.Cmd) {
+	if len(m.Modal.Fields) > 0 && m.Modal.ActiveField < len(m.Modal.Fields) {
+		f := &m.Modal.Fields[m.Modal.ActiveField]
+		if len(f.Options) > 0 {
+			switch key {
+			case "left":
+				f.OptionIdx = (f.OptionIdx - 1 + len(f.Options)) % len(f.Options)
+				f.Value = f.Options[f.OptionIdx]
+				return *m, nil
+			case "right", "space":
+				f.OptionIdx = (f.OptionIdx + 1) % len(f.Options)
+				f.Value = f.Options[f.OptionIdx]
+				return *m, nil
+			}
+		}
+	}
+
 	switch key {
 	case "esc":
 		m.Modal = ModalState{Type: ModalNone}
@@ -294,7 +318,7 @@ func (m *Model) handleModalKey(key string) (Model, tea.Cmd) {
 	case "backspace":
 		if len(m.Modal.Fields) > 0 {
 			f := &m.Modal.Fields[m.Modal.ActiveField]
-			if len(f.Value) > 0 {
+			if len(f.Options) == 0 && len(f.Value) > 0 {
 				f.Value = f.Value[:len(f.Value)-1]
 			}
 		}
@@ -310,7 +334,9 @@ func (m *Model) handleModalKey(key string) (Model, tea.Cmd) {
 	default:
 		if len(key) == 1 && len(m.Modal.Fields) > 0 {
 			f := &m.Modal.Fields[m.Modal.ActiveField]
-			f.Value += key
+			if len(f.Options) == 0 {
+				f.Value += key
+			}
 		}
 	}
 
@@ -319,13 +345,13 @@ func (m *Model) handleModalKey(key string) (Model, tea.Cmd) {
 
 func (m *Model) submitCurrentModal() {
 	switch m.Modal.Type {
-	case ModalBootstrapNode:
+	case ModalBootstrapNode, ModalAddNode:
 		name := m.getFieldValue("Имя ноды")
-		host := m.getFieldValue("IP / Хост")
-		pass := m.getFieldValue("Пароль SSH")
+		host := m.getFieldValue("IP / Хост ноды")
+		pass := m.getFieldValue("Пароль SSH (для автозагрузки ключа)")
 		user := m.getFieldValue("SSH Пользователь")
-		nType := m.getFieldValue("Тип ноды")
-		protStr := strings.ToLower(m.getFieldValue("Защита (y/n)"))
+		nType := m.getFieldValue("Тип платформы")
+		protStr := strings.ToLower(m.getFieldValue("Защита от удаления"))
 
 		if name == "" || host == "" {
 			m.LogMsg = "Ошибка: укажите имя и IP ноды"
@@ -338,18 +364,24 @@ func (m *Model) submitCurrentModal() {
 			nType = config.TypeLinux
 		}
 
-		keyPath, pubStr, err := ensureDefaultSSHKeyTUI()
-		if err != nil {
-			m.LogMsg = fmt.Sprintf("Ошибка ключа SSH: %v", err)
-			return
+		keyPath := "~/.config/wgmesh/keys/id_ed25519"
+		if pass != "" || m.Modal.Type == ModalBootstrapNode {
+			kp, pubStr, err := ensureDefaultSSHKeyTUI()
+			if err != nil {
+				m.LogMsg = fmt.Sprintf("Ошибка ключа SSH: %v", err)
+				return
+			}
+			keyPath = kp
+			if pass != "" {
+				m.LogMsg = fmt.Sprintf("→ Провижининг SSH-ключа на %s@%s…", user, host)
+				if err := installRemoteKeyTUI(host, 22, user, pass, keyPath, pubStr, nType); err != nil {
+					m.LogMsg = fmt.Sprintf("Ошибка установки SSH-ключа на удаленный хост: %v", err)
+					return
+				}
+			}
 		}
 
-		if err := installRemoteKeyTUI(host, 22, user, pass, keyPath, pubStr, nType); err != nil {
-			m.LogMsg = fmt.Sprintf("Ошибка провижининга SSH: %v", err)
-			return
-		}
-
-		isProt := protStr == "y" || protStr == "yes"
+		isProt := protStr == "да (protected: true)" || protStr == "y" || protStr == "yes"
 		m.Mesh.Nodes = append(m.Mesh.Nodes, config.Node{
 			Name:      name,
 			Type:      nType,
@@ -362,42 +394,14 @@ func (m *Model) submitCurrentModal() {
 		})
 		m.IsDirty = true
 		_ = config.Save(m.ConfigPath, m.Mesh)
-		m.LogMsg = fmt.Sprintf("✔ Нода %q успешно подключена по SSH ключу и добавлена!", name)
-		m.Modal = ModalState{Type: ModalNone}
-
-	case ModalAddNode:
-		name := m.getFieldValue("Имя ноды")
-		host := m.getFieldValue("IP / Хост")
-		nType := m.getFieldValue("Тип ноды")
-		user := m.getFieldValue("SSH Пользователь")
-		protStr := strings.ToLower(m.getFieldValue("Защита (y/n)"))
-		if name != "" && host != "" {
-			if nType == "" {
-				nType = config.TypeLinux
-			}
-			if user == "" {
-				user = "root"
-			}
-			m.Mesh.Nodes = append(m.Mesh.Nodes, config.Node{
-				Name:      name,
-				Type:      nType,
-				Host:      host,
-				SSHUser:   user,
-				SSHPort:   22,
-				Protected: protStr == "y" || protStr == "yes",
-				WireGuard: config.WG{Interface: "wg0", ListenPort: 51820},
-			})
-			m.IsDirty = true
-			_ = config.Save(m.ConfigPath, m.Mesh)
-			m.LogMsg = fmt.Sprintf("✔ Нода %q добавлена", name)
-		}
+		m.LogMsg = fmt.Sprintf("✔ Нода %q (%s) успешно добавлена!", name, host)
 		m.Modal = ModalState{Type: ModalNone}
 
 	case ModalAddRoute:
 		name := m.getFieldValue("Имя маршрута")
 		pathStr := m.getFieldValue("Путь (через запятую)")
-		exit := m.getFieldValue("Exit нода")
-		protStr := strings.ToLower(m.getFieldValue("Защита (y/n)"))
+		exit := m.getFieldValue("Выходной сервер (Exit)")
+		protStr := strings.ToLower(m.getFieldValue("Защита маршрута"))
 		if name != "" && pathStr != "" {
 			hops := splitTrimTUI(pathStr)
 			if len(hops) > 0 && hops[0] != config.ClientHop {
@@ -410,12 +414,46 @@ func (m *Model) submitCurrentModal() {
 				Name:      name,
 				Path:      hops,
 				ExitNode:  exit,
-				Protected: protStr == "y" || protStr == "yes",
+				Protected: protStr == "да (protected: true)" || protStr == "y" || protStr == "yes",
 			}
 			m.Mesh.Routes = append(m.Mesh.Routes, r)
 			m.IsDirty = true
 			_ = config.Save(m.ConfigPath, m.Mesh)
 			m.LogMsg = fmt.Sprintf("✔ Маршрут %q создан", name)
+		}
+		m.Modal = ModalState{Type: ModalNone}
+
+	case ModalAddClient:
+		name := m.getFieldValue("Имя клиента (устройства)")
+		ingress := m.getFieldValue("Нода подключения (Ingress)")
+		if name != "" {
+			if strings.HasPrefix(ingress, "(") {
+				ingress = ""
+			}
+			c := config.Client{
+				Name:    name,
+				Ingress: ingress,
+			}
+			m.Mesh.Clients = append(m.Mesh.Clients, c)
+			m.IsDirty = true
+			_ = config.Save(m.ConfigPath, m.Mesh)
+			m.LogMsg = fmt.Sprintf("✔ Клиент %q добавлен", name)
+		}
+		m.Modal = ModalState{Type: ModalNone}
+
+	case ModalAddList:
+		name := m.getFieldValue("Имя списка")
+		domStr := m.getFieldValue("Домены (через запятую)")
+		if name != "" {
+			doms := splitTrimTUI(domStr)
+			l := config.DomainList{
+				Name:    name,
+				Domains: doms,
+			}
+			m.Mesh.Lists = append(m.Mesh.Lists, l)
+			m.IsDirty = true
+			_ = config.Save(m.ConfigPath, m.Mesh)
+			m.LogMsg = fmt.Sprintf("✔ Список доменов %q добавлен", name)
 		}
 		m.Modal = ModalState{Type: ModalNone}
 
@@ -442,10 +480,24 @@ func (m *Model) submitCurrentModal() {
 func (m *Model) getFieldValue(label string) string {
 	for _, f := range m.Modal.Fields {
 		if f.Label == label {
+			if len(f.Options) > 0 && f.OptionIdx >= 0 && f.OptionIdx < len(f.Options) {
+				return f.Options[f.OptionIdx]
+			}
 			return strings.TrimSpace(f.Value)
 		}
 	}
 	return ""
+}
+
+func (m *Model) nodeNamesList() []string {
+	var names []string
+	for _, n := range m.Mesh.Nodes {
+		names = append(names, n.Name)
+	}
+	if len(names) == 0 {
+		names = []string{"(сначала добавьте ноду)"}
+	}
+	return names
 }
 
 func (m *Model) openBootstrapModal() {
@@ -453,11 +505,11 @@ func (m *Model) openBootstrapModal() {
 		Type: ModalBootstrapNode,
 		Fields: []FormField{
 			{Label: "Имя ноды", Placeholder: "kz-server"},
-			{Label: "IP / Хост", Placeholder: "109.248.198.55"},
-			{Label: "Пароль SSH", Mask: true},
+			{Label: "IP / Хост ноды", Placeholder: "109.248.198.55"},
+			{Label: "Пароль SSH (для автозагрузки ключа)", Mask: true},
+			{Label: "Тип платформы", Options: []string{"linux", "mikrotik", "openwrt"}, OptionIdx: 0, Value: "linux"},
 			{Label: "SSH Пользователь", Value: "root"},
-			{Label: "Тип ноды", Value: "linux"},
-			{Label: "Защита (y/n)", Value: "n"},
+			{Label: "Защита от удаления", Options: []string{"нет", "да (protected: true)"}, OptionIdx: 0, Value: "нет"},
 		},
 	}
 }
@@ -467,32 +519,40 @@ func (m *Model) openAddNodeModal() {
 		Type: ModalAddNode,
 		Fields: []FormField{
 			{Label: "Имя ноды", Placeholder: "de-server"},
-			{Label: "IP / Хост", Placeholder: "194.87.71.7"},
-			{Label: "Тип ноды", Value: "linux"},
+			{Label: "IP / Хост ноды", Placeholder: "194.87.71.7"},
+			{Label: "Пароль SSH (для автозагрузки ключа)", Mask: true},
+			{Label: "Тип платформы", Options: []string{"linux", "mikrotik", "openwrt"}, OptionIdx: 0, Value: "linux"},
 			{Label: "SSH Пользователь", Value: "root"},
-			{Label: "Защита (y/n)", Value: "n"},
+			{Label: "Защита от удаления", Options: []string{"нет", "да (protected: true)"}, OptionIdx: 0, Value: "нет"},
 		},
 	}
 }
 
 func (m *Model) openAddRouteModal() {
+	if len(m.Mesh.Nodes) == 0 {
+		m.LogMsg = "ℹ️ Для создания маршрута сначала добавьте хотя бы один сервер/роутер (нажмите 'b' для Bootstrap или 'n')"
+		return
+	}
+	nodeNames := m.nodeNamesList()
+	defaultPath := "client," + nodeNames[0]
 	m.Modal = ModalState{
 		Type: ModalAddRoute,
 		Fields: []FormField{
 			{Label: "Имя маршрута", Placeholder: "via-kz-de"},
-			{Label: "Путь (через запятую)", Placeholder: "client,kz-server,de-server"},
-			{Label: "Exit нода", Placeholder: "de-server"},
-			{Label: "Защита (y/n)", Value: "n"},
+			{Label: "Путь (через запятую)", Value: defaultPath},
+			{Label: "Выходной сервер (Exit)", Options: nodeNames, OptionIdx: 0, Value: nodeNames[0]},
+			{Label: "Защита маршрута", Options: []string{"нет", "да (protected: true)"}, OptionIdx: 0, Value: "нет"},
 		},
 	}
 }
 
 func (m *Model) openAddClientModal() {
+	nodeNames := m.nodeNamesList()
 	m.Modal = ModalState{
 		Type: ModalAddClient,
 		Fields: []FormField{
-			{Label: "Имя клиента", Placeholder: "alice-phone"},
-			{Label: "Ingress Нода", Placeholder: "kz-server"},
+			{Label: "Имя клиента (устройства)", Placeholder: "alice-phone"},
+			{Label: "Нода подключения (Ingress)", Options: nodeNames, OptionIdx: 0, Value: nodeNames[0]},
 		},
 	}
 }
@@ -876,10 +936,6 @@ func (m Model) View() string {
 		bottomLog,
 		statusBar,
 	)
-}
-
-func fmtPrintfStr(format string, a ...interface{}) string {
-	return fmt.Sprintf(format, a...)
 }
 
 func splitTrimTUI(s string) []string {
