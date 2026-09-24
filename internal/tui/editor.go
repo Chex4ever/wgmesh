@@ -14,9 +14,14 @@ type RouteEditor struct {
 }
 
 // RenderEditorPane отображает интерактивный редактор выбранного маршрута.
-func RenderEditorPane(m *config.Mesh, ed *RouteEditor, isActive bool) string {
+func RenderEditorPane(m *config.Mesh, ed *RouteEditor, isActive bool, width int) string {
+	style := paneStyle.Width(width)
+	if isActive {
+		style = activePaneStyle.Width(width)
+	}
+
 	if len(m.Routes) == 0 || ed.RouteIdx < 0 || ed.RouteIdx >= len(m.Routes) {
-		return paneStyle.Render("Редактор маршрута:Выберите маршрут для редактирования")
+		return style.Render("Редактор маршрута: Выберите маршрут для редактирования")
 	}
 
 	r := &m.Routes[ed.RouteIdx]
@@ -41,13 +46,8 @@ func RenderEditorPane(m *config.Mesh, ed *RouteEditor, isActive bool) string {
 	sb.WriteString(fmt.Sprintf("Exit Node: %s\n\n", r.ExitNode))
 
 	hints := lipgloss.NewStyle().Foreground(lipgloss.Color("243")).Render(
-		"[←/→] навигация | [+] добавить хоп | [-] удалить | [e] установить exit")
+		"[+] добавить хоп | [-] удалить хоп | [e] изменить маршрут")
 	sb.WriteString(hints)
-
-	style := paneStyle
-	if isActive {
-		style = activePaneStyle
-	}
 
 	return style.Render(sb.String())
 }

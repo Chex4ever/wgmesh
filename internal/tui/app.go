@@ -816,32 +816,45 @@ func (m Model) View() string {
 		return renderModalOverlay(m)
 	}
 
+	totalWidth := m.Width - 4
+	if totalWidth < 40 {
+		totalWidth = 40
+	}
+
+	colWidth := (totalWidth - 4) / 2
+	if colWidth < 20 {
+		colWidth = 20
+	}
+
 	header := lipgloss.NewStyle().
 		Bold(true).
 		Foreground(lipgloss.Color("86")).
 		Render(fmt.Sprintf("═══ %s (wgmesh TUI) ═══", m.Mesh.Name))
 
-	topView := RenderTopology(m.Mesh, m.SelectedRoute, m.Width)
+	topView := RenderTopology(m.Mesh, m.SelectedRoute, totalWidth)
 
-	topBox := paneStyle.Width(m.Width - 4).Render(
+	topBox := paneStyle.Width(totalWidth).Render(
 		header + "\n\n" + topView,
 	)
 
-	nodesView := RenderNodesPane(m.Mesh, m.SelectedNode, m.ActivePane == PaneNodes, m.Height)
-	routesView := RenderRoutesPane(m.Mesh, m.SelectedRoute, m.ActivePane == PaneRoutes, m.Height)
-	clientsView := RenderClientsPane(m.Mesh, m.SelectedClient, m.ActivePane == PaneClients, m.Height)
-	listsView := RenderListsPane(m.Mesh, m.SelectedList, m.ActivePane == PaneLists, m.Height)
-	editorView := RenderEditorPane(m.Mesh, &m.Editor, m.ActivePane == PaneEditor)
+	paneHeight := 6
+	nodesView := RenderNodesPane(m.Mesh, m.SelectedNode, m.ActivePane == PaneNodes, colWidth, paneHeight)
+	routesView := RenderRoutesPane(m.Mesh, m.SelectedRoute, m.ActivePane == PaneRoutes, colWidth, paneHeight)
+	clientsView := RenderClientsPane(m.Mesh, m.SelectedClient, m.ActivePane == PaneClients, colWidth, paneHeight)
+	listsView := RenderListsPane(m.Mesh, m.SelectedList, m.ActivePane == PaneLists, colWidth, paneHeight)
+	editorView := RenderEditorPane(m.Mesh, &m.Editor, m.ActivePane == PaneEditor, totalWidth)
 
 	middleUpper := lipgloss.JoinHorizontal(
 		lipgloss.Top,
 		nodesView,
+		" ",
 		routesView,
 	)
 
 	middleLower := lipgloss.JoinHorizontal(
 		lipgloss.Top,
 		clientsView,
+		" ",
 		listsView,
 	)
 

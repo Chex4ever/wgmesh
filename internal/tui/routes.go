@@ -9,20 +9,20 @@ import (
 )
 
 // RenderRoutesPane отображает список маршрутов.
-func RenderRoutesPane(m *config.Mesh, selectedIdx int, isActive bool, height int) string {
+func RenderRoutesPane(m *config.Mesh, selectedIdx int, isActive bool, width, height int) string {
 	var sb strings.Builder
 	sb.WriteString("Список маршрутов (Routes):\n\n")
 
 	if len(m.Routes) == 0 {
-		sb.WriteString("  (Нет маршрутов. Нажмите 'r' для создания)")
+		sb.WriteString("  (Нет маршрутов. Нажмите 'r')")
 	} else {
 		for i, r := range m.Routes {
 			hopsStr := strings.Join(r.Path, " ──▶ ")
 			protBadge := ""
 			if r.Protected {
-				protBadge = lipgloss.NewStyle().Foreground(lipgloss.Color("208")).Render(" [PROTECTED]")
+				protBadge = lipgloss.NewStyle().Foreground(lipgloss.Color("208")).Render(" [PROT]")
 			}
-			line := fmt.Sprintf("%-14s [%s] (Exit: %s)%s", r.Name, hopsStr, r.ExitNode, protBadge)
+			line := fmt.Sprintf("%-10s [%s] (%s)%s", r.Name, hopsStr, r.ExitNode, protBadge)
 
 			if i == selectedIdx {
 				sb.WriteString(itemSelectedStyle.Render(fmt.Sprintf("► %s", line)))
@@ -33,9 +33,9 @@ func RenderRoutesPane(m *config.Mesh, selectedIdx int, isActive bool, height int
 		}
 	}
 
-	style := paneStyle
+	style := paneStyle.Width(width)
 	if isActive {
-		style = activePaneStyle
+		style = activePaneStyle.Width(width)
 	}
 
 	return style.Render(sb.String())

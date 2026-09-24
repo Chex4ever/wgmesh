@@ -28,12 +28,12 @@ var (
 )
 
 // RenderNodesPane отображает список нод сети.
-func RenderNodesPane(m *config.Mesh, selectedIdx int, isActive bool, height int) string {
+func RenderNodesPane(m *config.Mesh, selectedIdx int, isActive bool, width, height int) string {
 	var sb strings.Builder
 	sb.WriteString("Список узлов (Nodes):\n\n")
 
 	if len(m.Nodes) == 0 {
-		sb.WriteString("  (Нет узлов. Нажмите 'n' для добавления)")
+		sb.WriteString("  (Нет узлов. Нажмите 'n')")
 	} else {
 		for i, n := range m.Nodes {
 			icon := "●"
@@ -51,10 +51,10 @@ func RenderNodesPane(m *config.Mesh, selectedIdx int, isActive bool, height int)
 
 			protBadge := ""
 			if n.Protected {
-				protBadge = lipgloss.NewStyle().Foreground(lipgloss.Color("208")).Render(" [PROTECTED]")
+				protBadge = lipgloss.NewStyle().Foreground(lipgloss.Color("208")).Render(" [PROT]")
 			}
 
-			line := fmt.Sprintf("%s %-14s [%-8s] %s (%s)%s", icon, n.Name, n.Type, n.Host, ip, protBadge)
+			line := fmt.Sprintf("%s %-10s [%-7s] %s%s", icon, n.Name, n.Type, n.Host, protBadge)
 
 			if i == selectedIdx {
 				sb.WriteString(itemSelectedStyle.Render(fmt.Sprintf("► %s", line)))
@@ -65,9 +65,9 @@ func RenderNodesPane(m *config.Mesh, selectedIdx int, isActive bool, height int)
 		}
 	}
 
-	style := paneStyle
+	style := paneStyle.Width(width)
 	if isActive {
-		style = activePaneStyle
+		style = activePaneStyle.Width(width)
 	}
 
 	return style.Render(sb.String())

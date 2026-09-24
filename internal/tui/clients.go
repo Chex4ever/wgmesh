@@ -8,12 +8,12 @@ import (
 )
 
 // RenderClientsPane отображает список клиентских устройств.
-func RenderClientsPane(m *config.Mesh, selectedIdx int, isActive bool, height int) string {
+func RenderClientsPane(m *config.Mesh, selectedIdx int, isActive bool, width, height int) string {
 	var sb strings.Builder
 	sb.WriteString("Список клиентов (Clients):\n\n")
 
 	if len(m.Clients) == 0 {
-		sb.WriteString("  (Нет клиентов. Нажмите 'c' для добавления)")
+		sb.WriteString("  (Нет клиентов. Нажмите 'c')")
 	} else {
 		for i, c := range m.Clients {
 			ip := c.IP
@@ -24,7 +24,7 @@ func RenderClientsPane(m *config.Mesh, selectedIdx int, isActive bool, height in
 			if ingress == "" {
 				ingress = "не назначен"
 			}
-			line := fmt.Sprintf("📱 %-14s [%s] Ingress: %s", c.Name, ip, ingress)
+			line := fmt.Sprintf("📱 %-10s [%s] -> %s", c.Name, ip, ingress)
 
 			if i == selectedIdx {
 				sb.WriteString(itemSelectedStyle.Render(fmt.Sprintf("► %s", line)))
@@ -35,9 +35,9 @@ func RenderClientsPane(m *config.Mesh, selectedIdx int, isActive bool, height in
 		}
 	}
 
-	style := paneStyle
+	style := paneStyle.Width(width)
 	if isActive {
-		style = activePaneStyle
+		style = activePaneStyle.Width(width)
 	}
 
 	return style.Render(sb.String())

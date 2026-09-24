@@ -8,17 +8,17 @@ import (
 )
 
 // RenderListsPane отображает список доменов/IP для селективного туннелирования.
-func RenderListsPane(m *config.Mesh, selectedIdx int, isActive bool, height int) string {
+func RenderListsPane(m *config.Mesh, selectedIdx int, isActive bool, width, height int) string {
 	var sb strings.Builder
 	sb.WriteString("Списки доменов/IP (Split Tunneling):\n\n")
 
 	if len(m.Lists) == 0 {
-		sb.WriteString("  (Нет списков. Нажмите 'l' для создания)")
+		sb.WriteString("  (Нет списков. Нажмите 'l')")
 	} else {
 		for i, l := range m.Lists {
 			countD := len(l.Domains)
 			countIP := len(l.IPs)
-			line := fmt.Sprintf("🌐 %-14s (Доменов: %d, IPs: %d)", l.Name, countD, countIP)
+			line := fmt.Sprintf("🌐 %-10s (Domains: %d, IPs: %d)", l.Name, countD, countIP)
 
 			if i == selectedIdx {
 				sb.WriteString(itemSelectedStyle.Render(fmt.Sprintf("► %s", line)))
@@ -29,9 +29,9 @@ func RenderListsPane(m *config.Mesh, selectedIdx int, isActive bool, height int)
 		}
 	}
 
-	style := paneStyle
+	style := paneStyle.Width(width)
 	if isActive {
-		style = activePaneStyle
+		style = activePaneStyle.Width(width)
 	}
 
 	return style.Render(sb.String())
