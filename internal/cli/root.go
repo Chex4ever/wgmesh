@@ -32,8 +32,10 @@ func Execute() {
 		initCmd(),
 		nodeCmd(),
 		routeCmd(),
+		planCmd(),
 		applyCmd(),
 		clientConfigCmd(),
+		tuiCmd(),
 		versionCmd(),
 	)
 

@@ -143,3 +143,41 @@ func TestClientAddressFor(t *testing.T) {
 		t.Fatalf("ClientAddressFor(3) = %s", got)
 	}
 }
+
+func TestAllowedIPsForPeer(t *testing.T) {
+	m := validMesh()
+	self := &m.Nodes[0]
+	self.MeshIP = "10.66.0.10"
+	peer := &m.Nodes[1]
+	peer.MeshIP = "10.66.0.11"
+
+	ipsNonNext := AllowedIPsForPeer(self, peer, m, false)
+	if len(ipsNonNext) != 1 || ipsNonNext[0] != "10.66.0.11/32" {
+		t.Fatalf("AllowedIPsForPeer(false) = %v, want [10.66.0.11/32]", ipsNonNext)
+	}
+
+	ipsNext := AllowedIPsForPeer(self, peer, m, true)
+	if len(ipsNext) != 2 || ipsNext[0] != "10.66.0.11/32" || ipsNext[1] != "10.66.0.0/24" {
+		t.Fatalf("AllowedIPsForPeer(true) = %v, want [10.66.0.11/32, 10.66.0.0/24]", ipsNext)
+	}
+}
+
+func TestValidateClientsAndLists(t *testing.T) {
+	m := validMesh()
+	m.Clients = []config.Client{
+		{Name: "alice", IP: "10.66.0.100", Ingress: "kz"},
+	}
+	m.Lists = []config.DomainList{
+		{Name: "youtube", Domains: []string{"youtube.com"}},
+	}
+	m.Routes[0].From = []string{"alice"}
+	m.Routes[0].Match = config.TrafficMatch{List: "youtube"}
+
+	if err := Validate(m); err != nil {
+		t.Fatalf("валидация клиентов и списков провалена: %v", err)
+	}
+
+	// Ошибка при ссылке на неизвестный список
+	m.Routes[0].Match.List = "unknown-list"
+	mustContain(t, Validate(m), "unknown-list")
+}

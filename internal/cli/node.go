@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"encoding/json"
 	"fmt"
 	"text/tabwriter"
 
@@ -71,7 +72,8 @@ func nodeAddCmd() *cobra.Command {
 }
 
 func nodeListCmd() *cobra.Command {
-	return &cobra.Command{
+	var jsonOut bool
+	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "Список нод",
 		Args:  cobra.NoArgs,
@@ -79,6 +81,11 @@ func nodeListCmd() *cobra.Command {
 			m, err := loadMesh()
 			if err != nil {
 				return err
+			}
+			if jsonOut {
+				enc := json.NewEncoder(cmd.OutOrStdout())
+				enc.SetIndent("", "  ")
+				return enc.Encode(m.Nodes)
 			}
 			w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 4, 2, ' ', 0)
 			fmt.Fprintln(w, "ИМЯ\tТИП\tHOST\tWG IFACE\tPORT\tMESH IP\tКЛЮЧ")
@@ -103,6 +110,8 @@ func nodeListCmd() *cobra.Command {
 			return w.Flush()
 		},
 	}
+	cmd.Flags().BoolVar(&jsonOut, "json", false, "вывод в формате JSON")
+	return cmd
 }
 
 func nodeRemoveCmd() *cobra.Command {

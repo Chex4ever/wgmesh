@@ -86,14 +86,15 @@ func (mgr *Manager) ClientAddressFor(routeIdx int) string {
 
 // Plan describes what apply should do for each node involved in routes.
 type NodePlan struct {
-	Node        *config.Node
-	PeerNames   []string // имена пиров (ноды/клиенты маршрутов), которые должны быть настроены на этой ноде
-	IsExit      bool     // является ли exit-нодой хотя бы для одного маршрута
-	IsRelay     bool     // промежуточный хоп (нужен ip_forward без NAT)
-	ClientRoutes []string // маршруты, где эта нода — первый хоп после client (настраивает peer для клиента)
+	Node         *config.Node
+	PeerNames    []string        // имена пиров (ноды/клиенты маршрутов), которые должны быть настроены на этой ноде
+	IsExit       bool            // является ли exit-нодой хотя бы для одного маршрута
+	IsRelay      bool            // промежуточный хоп (нужен ip_forward без NAT)
+	NextHops     map[string]bool // соседи, находящиеся на пути транзита к exit
+	ClientRoutes []string        // маршруты, где эта нода — первый хоп после client (настраивает peer для клиента)
 }
 
-// BuildPlan строит план применения: какие ноды участвуют, кто relay, кто exit.
+// BuildPlan строит план применения: какие ноды участвуют, кто relay, кто exit, кто next-hop.
 func (mgr *Manager) BuildPlan() []NodePlan {
 	byName := map[string]*NodePlan{}
 	order := []string{}
@@ -101,7 +102,10 @@ func (mgr *Manager) BuildPlan() []NodePlan {
 		if p, ok := byName[name]; ok {
 			return p
 		}
-		p := &NodePlan{Node: mgr.Mesh.NodeByName(name)}
+		p := &NodePlan{
+			Node:     mgr.Mesh.NodeByName(name),
+			NextHops: make(map[string]bool),
+		}
 		byName[name] = p
 		order = append(order, name)
 		return p
@@ -123,6 +127,11 @@ func (mgr *Manager) BuildPlan() []NodePlan {
 				p.PeerNames = appendUnique(p.PeerNames, prev)
 				get(prev).PeerNames = appendUnique(get(prev).PeerNames, h)
 			}
+			// Фиксация следующего хопа по направлению к exit
+			if idx < len(hops)-1 {
+				next := hops[idx+1]
+				p.NextHops[next] = true
+			}
 		}
 		if len(hops) > 0 {
 			first := get(hops[0])
@@ -137,13 +146,12 @@ func (mgr *Manager) BuildPlan() []NodePlan {
 	return plans
 }
 
-// AllowedIPsForHop возвращает набор AllowedIPs для peer'а, соответствующего ноде node,
-// на стороне её соседа: адрес самой ноды + mesh-подсеть, если нода ретранслирует дальше,
-// плюс 0.0.0.0/0 для exit-нод со стороны клиента.
-func AllowedIPsForHop(node *config.Node, asExit bool) []string {
-	ips := []string{node.MeshIP + "/32"}
-	if asExit {
-		ips = append(ips, "0.0.0.0/0")
+// AllowedIPsForPeer вычисляет список AllowedIPs для конкретного peer'а на узле self.
+// Если peer является следующим хопом по направлению к exit (isNextHop), добавляется транзитный mesh_cidr.
+func AllowedIPsForPeer(self *config.Node, peer *config.Node, m *config.Mesh, isNextHop bool) []string {
+	ips := []string{peer.MeshIP + "/32"}
+	if isNextHop {
+		ips = appendUnique(ips, m.CIDROrDefault())
 	}
 	return ips
 }

@@ -74,7 +74,39 @@ func Validate(m *config.Mesh) error {
 		}
 	}
 
+	_, meshNet, errCIDR := net.ParseCIDR(m.CIDROrDefault())
+
+	clientNames := map[string]bool{}
+	for i := range m.Clients {
+		c := &m.Clients[i]
+		if c.Name == "" {
+			errs = append(errs, fmt.Sprintf("client[%d]: пустое имя", i))
+			continue
+		}
+		if clientNames[c.Name] {
+			errs = append(errs, fmt.Sprintf("client %q: дублируется имя клиента", c.Name))
+		}
+		clientNames[c.Name] = true
+		if c.Ingress != "" && !names[c.Ingress] {
+			errs = append(errs, fmt.Sprintf("client %q: ingress ссылается на неизвестную ноду %q", c.Name, c.Ingress))
+		}
+	}
+
+	listNames := map[string]bool{}
+	for i := range m.Lists {
+		l := &m.Lists[i]
+		if l.Name == "" {
+			errs = append(errs, fmt.Sprintf("list[%d]: пустое имя", i))
+			continue
+		}
+		if listNames[l.Name] {
+			errs = append(errs, fmt.Sprintf("list %q: дублируется имя списка", l.Name))
+		}
+		listNames[l.Name] = true
+	}
+
 	routeNames := map[string]bool{}
+	seenPaths := map[string]string{} // join(path, ",") -> route.Name
 	for i := range m.Routes {
 		r := &m.Routes[i]
 		if r.Name == "" {
@@ -90,6 +122,22 @@ func Validate(m *config.Mesh) error {
 			errs = append(errs, fmt.Sprintf("route %q: path должен начинаться с 'client' и содержать хотя бы одну ноду", r.Name))
 			continue
 		}
+		pathKey := strings.Join(r.Path, "->")
+		if existing, ok := seenPaths[pathKey]; ok {
+			errs = append(errs, fmt.Sprintf("route %q: дубликат пути %q (уже используется в маршруте %q)", r.Name, pathKey, existing))
+		}
+		seenPaths[pathKey] = r.Name
+
+		for _, fromClient := range r.From {
+			if !clientNames[fromClient] {
+				errs = append(errs, fmt.Sprintf("route %q: from ссылается на неизвестного клиента %q", r.Name, fromClient))
+			}
+		}
+
+		if r.Match.List != "" && !listNames[r.Match.List] {
+			errs = append(errs, fmt.Sprintf("route %q: match.list ссылается на неизвестный список %q", r.Name, r.Match.List))
+		}
+
 		seen := map[string]bool{}
 		for _, p := range r.Path {
 			if p == config.ClientHop {
@@ -109,6 +157,16 @@ func Validate(m *config.Mesh) error {
 			errs = append(errs, fmt.Sprintf("route %q: exit_node %q — неизвестная нода", r.Name, r.ExitNode))
 		} else if r.Path[len(r.Path)-1] != r.ExitNode {
 			errs = append(errs, fmt.Sprintf("route %q: exit_node %q должен быть последним хопом пути", r.Name, r.ExitNode))
+		}
+	}
+
+	for i := range m.Nodes {
+		n := &m.Nodes[i]
+		if n.MeshIP != "" && errCIDR == nil && meshNet != nil {
+			parsedIP := net.ParseIP(n.MeshIP)
+			if parsedIP != nil && !meshNet.Contains(parsedIP) {
+				errs = append(errs, fmt.Sprintf("node %q: mesh_ip %q находится вне mesh-подсети %s", n.Name, n.MeshIP, m.CIDROrDefault()))
+			}
 		}
 	}
 

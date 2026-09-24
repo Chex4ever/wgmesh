@@ -126,10 +126,16 @@ func (d *LinuxDriver) ApplySpec(spec *NodeApplySpec) error {
 		return fmt.Errorf("drivers/linux: запись %s: %w", confPath, err)
 	}
 
-	// 3. forwarding
+	// 3. forwarding & sysctl persistence
 	if spec.Forward || spec.NAT {
-		if _, err := r.run("sysctl -w net.ipv4.ip_forward=1 && sed -i 's/^#*net.ipv4.ip_forward.*/net.ipv4.ip_forward=1/' /etc/sysctl.conf || true"); err != nil {
-			return fmt.Errorf("drivers/linux: ip_forward: %w", err)
+		sysctlCmd := "mkdir -p /etc/sysctl.d && echo 'net.ipv4.ip_forward=1' > /etc/sysctl.d/99-meshctl.conf && sysctl -p /etc/sysctl.d/99-meshctl.conf || sysctl -w net.ipv4.ip_forward=1"
+		if out, err := r.run(sysctlCmd); err != nil {
+			return fmt.Errorf("drivers/linux: ip_forward: %w\n%s", err, out)
+		}
+		// TCP MSS Clamping для предотвращения зависания TLS/HTTPS в multihop
+		mssRule := "iptables -t mangle -C FORWARD -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu 2>/dev/null || iptables -t mangle -A FORWARD -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu"
+		if out, err := r.run(mssRule); err != nil {
+			return fmt.Errorf("drivers/linux: MSS clamping: %w\n%s", err, out)
 		}
 	}
 
