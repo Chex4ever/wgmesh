@@ -46,7 +46,7 @@ func RenderEditorPane(m *config.Mesh, ed *RouteEditor, isActive bool, width int)
 	}
 
 	chain := lipgloss.JoinHorizontal(lipgloss.Center, elements...)
-	sb.WriteString("   " + chain + "\n\n")
+	sb.WriteString(indentBlock(chain, 3) + "\n\n")
 
 	sb.WriteString(fmt.Sprintf("Exit Node: %s\n\n", r.ExitNode))
 

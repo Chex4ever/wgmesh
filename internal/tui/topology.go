@@ -96,7 +96,7 @@ func renderRouteChain(m *config.Mesh, r *config.Route, isSelected bool) string {
 	elements = append(elements, arrow, renderBox("Internet", isSelected))
 
 	chain := lipgloss.JoinHorizontal(lipgloss.Center, elements...)
-	return "   " + chain
+	return indentBlock(chain, 3)
 }
 
 func renderBox(text string, isSelected bool) string {
@@ -104,4 +104,15 @@ func renderBox(text string, isSelected bool) string {
 		return selectedBoxStyle.Render(text)
 	}
 	return boxStyle.Render(text)
+}
+
+func indentBlock(s string, indent int) string {
+	pad := strings.Repeat(" ", indent)
+	lines := strings.Split(s, "\n")
+	for i, l := range lines {
+		if l != "" {
+			lines[i] = pad + l
+		}
+	}
+	return strings.Join(lines, "\n")
 }
