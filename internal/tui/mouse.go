@@ -107,24 +107,37 @@ func (m *Model) handleMouseMsg(msg tea.MouseMsg) (Model, tea.Cmd) {
 		yRel := y - topHeight - 1
 
 		if x < nodesWidth {
-			m.ActivePane = PaneNodes
 			nodeCount := len(m.Mesh.Nodes)
 			if yRel >= 2 && yRel < 2+nodeCount {
-				m.SelectedNode = yRel - 2
+				clickedIdx := yRel - 2
+				if m.ActivePane == PaneNodes && m.SelectedNode == clickedIdx {
+					m.openEditNodeModal()
+				} else {
+					m.ActivePane = PaneNodes
+					m.SelectedNode = clickedIdx
+				}
 			} else if yRel == 2+nodeCount {
+				m.ActivePane = PaneNodes
 				m.SelectedNode = nodeCount
 				m.openAddNodeModal()
 			} else if yRel == 3+nodeCount {
+				m.ActivePane = PaneNodes
 				m.SelectedNode = nodeCount + 1
 				m.openBootstrapModal()
 			}
 		} else {
-			m.ActivePane = PaneRoutes
 			routeCount := len(m.Mesh.Routes)
 			if yRel >= 2 && yRel < 2+routeCount {
-				m.SelectedRoute = yRel - 2
-				m.Editor.RouteIdx = m.SelectedRoute
+				clickedIdx := yRel - 2
+				if m.ActivePane == PaneRoutes && m.SelectedRoute == clickedIdx {
+					m.openEditRouteModal()
+				} else {
+					m.ActivePane = PaneRoutes
+					m.SelectedRoute = clickedIdx
+					m.Editor.RouteIdx = clickedIdx
+				}
 			} else if yRel == 2+routeCount {
+				m.ActivePane = PaneRoutes
 				m.SelectedRoute = routeCount
 				m.openAddRouteModal()
 			}
@@ -137,20 +150,32 @@ func (m *Model) handleMouseMsg(msg tea.MouseMsg) (Model, tea.Cmd) {
 		yRel := y - (topHeight + midUpperHeight) - 1
 
 		if x < nodesWidth {
-			m.ActivePane = PaneClients
 			clientCount := len(m.Mesh.Clients)
 			if yRel >= 2 && yRel < 2+clientCount {
-				m.SelectedClient = yRel - 2
+				clickedIdx := yRel - 2
+				if m.ActivePane == PaneClients && m.SelectedClient == clickedIdx {
+					m.openEditClientModal()
+				} else {
+					m.ActivePane = PaneClients
+					m.SelectedClient = clickedIdx
+				}
 			} else if yRel == 2+clientCount {
+				m.ActivePane = PaneClients
 				m.SelectedClient = clientCount
 				m.openAddClientModal()
 			}
 		} else {
-			m.ActivePane = PaneLists
 			listCount := len(m.Mesh.Lists)
 			if yRel >= 2 && yRel < 2+listCount {
-				m.SelectedList = yRel - 2
+				clickedIdx := yRel - 2
+				if m.ActivePane == PaneLists && m.SelectedList == clickedIdx {
+					m.openEditListModal()
+				} else {
+					m.ActivePane = PaneLists
+					m.SelectedList = clickedIdx
+				}
 			} else if yRel == 2+listCount {
+				m.ActivePane = PaneLists
 				m.SelectedList = listCount
 				m.openAddListModal()
 			}

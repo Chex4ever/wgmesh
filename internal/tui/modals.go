@@ -17,12 +17,20 @@ func renderModalOverlay(m Model) string {
 		body = renderFormModal("🚀 Zero-Touch SSH Bootstrap Ноды", m.Modal)
 	case ModalAddNode:
 		body = renderFormModal("➕ Добавление Ноды", m.Modal)
+	case ModalEditNode:
+		body = renderFormModal("✏️ Настройки и Редактирование Ноды", m.Modal)
 	case ModalAddRoute:
 		body = renderFormModal("➕ Создание Маршрута", m.Modal)
+	case ModalEditRoute:
+		body = renderFormModal("✏️ Редактирование Маршрута", m.Modal)
 	case ModalAddClient:
 		body = renderFormModal("👤 Добавление Клиента", m.Modal)
+	case ModalEditClient:
+		body = renderFormModal("✏️ Настройки Клиента", m.Modal)
 	case ModalAddList:
 		body = renderFormModal("🌐 Добавление Доменного Списка", m.Modal)
+	case ModalEditList:
+		body = renderFormModal("✏️ Редактирование Доменного Списка", m.Modal)
 	case ModalConfirm:
 		body = renderConfirmModal(m.Modal)
 	case ModalDoctor:

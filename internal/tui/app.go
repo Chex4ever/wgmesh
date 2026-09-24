@@ -41,10 +41,14 @@ const (
 	ModalNone ModalType = iota
 	ModalHelp
 	ModalAddNode
+	ModalEditNode
 	ModalBootstrapNode
 	ModalAddRoute
+	ModalEditRoute
 	ModalAddClient
+	ModalEditClient
 	ModalAddList
+	ModalEditList
 	ModalConfirm
 	ModalDoctor
 	ModalExport
@@ -191,19 +195,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.openAddListModal()
 
 		case "e":
-			m.openEditRouteModal()
-
-		case "x", "delete":
-			m.handleDeleteCurrent()
-
-		case "t":
-			m.handleTeardownNode()
-
-		case "k":
-			m.handleCapabilities()
-
-		case "g":
-			m.openGitModal()
+			switch m.ActivePane {
+			case PaneNodes:
+				m.openEditNodeModal()
+			case PaneRoutes, PaneEditor, PaneTopology:
+				m.openEditRouteModal()
+			case PaneClients:
+				m.openEditClientModal()
+			case PaneLists:
+				m.openEditListModal()
+			}
 
 		case "enter", "space":
 			switch m.ActivePane {
@@ -213,7 +214,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				} else if m.SelectedNode == len(m.Mesh.Nodes)+1 {
 					m.openBootstrapModal()
 				} else {
-					m.handleCapabilities()
+					m.openEditNodeModal()
 				}
 			case PaneRoutes:
 				if m.SelectedRoute == len(m.Mesh.Routes) {
@@ -224,10 +225,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case PaneClients:
 				if m.SelectedClient == len(m.Mesh.Clients) {
 					m.openAddClientModal()
+				} else {
+					m.openEditClientModal()
 				}
 			case PaneLists:
 				if m.SelectedList == len(m.Mesh.Lists) {
 					m.openAddListModal()
+				} else {
+					m.openEditListModal()
 				}
 			}
 
@@ -414,7 +419,11 @@ func (m *Model) submitCurrentModal() {
 		protStr := strings.ToLower(m.getFieldValue("Защита от удаления"))
 
 		if name == "" || host == "" {
-			m.LogMsg = "Ошибка: укажите имя и IP ноды"
+			m.LogMsg = "⚠️ Ошибка: укажите имя и IP ноды"
+			return
+		}
+		if m.isNodeNameTaken(name, -1) {
+			m.LogMsg = fmt.Sprintf("⚠️ Ошибка: Имя ноды %q уже занято! Укажите уникальное имя.", name)
 			return
 		}
 		if user == "" {
@@ -447,7 +456,7 @@ func (m *Model) submitCurrentModal() {
 			Type:      nType,
 			Host:      host,
 			SSHUser:   user,
-			SSHKey:    "~/.config/wgmesh/keys/id_ed25519",
+			SSHKey:    keyPath,
 			SSHPort:   22,
 			Protected: isProt,
 			WireGuard: config.WG{Interface: "wg0", ListenPort: 51820},
@@ -457,12 +466,79 @@ func (m *Model) submitCurrentModal() {
 		m.LogMsg = fmt.Sprintf("✔ Нода %q (%s) успешно добавлена!", name, host)
 		m.Modal = ModalState{Type: ModalNone}
 
+	case ModalEditNode:
+		if m.SelectedNode < 0 || m.SelectedNode >= len(m.Mesh.Nodes) {
+			m.Modal = ModalState{Type: ModalNone}
+			return
+		}
+		oldNode := &m.Mesh.Nodes[m.SelectedNode]
+		oldName := oldNode.Name
+
+		newName := m.getFieldValue("Имя ноды")
+		host := m.getFieldValue("IP / Хост ноды")
+		pass := m.getFieldValue("Пароль SSH (для автозагрузки ключа)")
+		user := m.getFieldValue("SSH Пользователь")
+		nType := m.getFieldValue("Тип платформы")
+		protStr := strings.ToLower(m.getFieldValue("Защита от удаления"))
+
+		if newName == "" || host == "" {
+			m.LogMsg = "⚠️ Ошибка: имя и IP ноды не могут быть пустыми!"
+			return
+		}
+		if m.isNodeNameTaken(newName, m.SelectedNode) {
+			m.LogMsg = fmt.Sprintf("⚠️ Ошибка: Имя ноды %q уже занято!", newName)
+			return
+		}
+		if user == "" {
+			user = "root"
+		}
+		if nType == "" {
+			nType = config.TypeLinux
+		}
+
+		if pass != "" {
+			kp, pubStr, err := ensureDefaultSSHKeyTUI()
+			if err == nil {
+				m.LogMsg = fmt.Sprintf("→ Провижининг SSH-ключа на %s@%s…", user, host)
+				if err := installRemoteKeyTUI(host, 22, user, pass, kp, pubStr, nType); err != nil {
+					m.LogMsg = fmt.Sprintf("⚠️ Ошибка установки SSH-ключа: %v", err)
+					return
+				}
+			}
+		}
+
+		isProt := protStr == "да (protected: true)" || protStr == "y" || protStr == "yes"
+
+		if newName != oldName {
+			m.renameNode(oldName, newName)
+		}
+
+		oldNode.Name = newName
+		oldNode.Host = host
+		oldNode.SSHUser = user
+		oldNode.Type = nType
+		oldNode.Protected = isProt
+
+		m.IsDirty = true
+		_ = config.Save(m.ConfigPath, m.Mesh)
+
+		if newName != oldName {
+			m.LogMsg = fmt.Sprintf("✔ Нода переименована: %q ➔ %q (обновлена во всех маршрутах и клиентах)!", oldName, newName)
+		} else {
+			m.LogMsg = fmt.Sprintf("✔ Настройки ноды %q сохранены!", newName)
+		}
+		m.Modal = ModalState{Type: ModalNone}
+
 	case ModalAddRoute:
 		name := m.getFieldValue("Имя маршрута")
 		pathStr := m.getFieldValue("Путь (через запятую)")
 		exit := m.getFieldValue("Выходной сервер (Exit)")
 		protStr := strings.ToLower(m.getFieldValue("Защита маршрута"))
 		if name != "" && pathStr != "" {
+			if m.isRouteNameTaken(name, -1) {
+				m.LogMsg = fmt.Sprintf("⚠️ Ошибка: Имя маршрута %q уже занято!", name)
+				return
+			}
 			hops := splitTrimTUI(pathStr)
 			if len(hops) > 0 && hops[0] != config.ClientHop {
 				hops = append([]string{config.ClientHop}, hops...)
@@ -483,10 +559,52 @@ func (m *Model) submitCurrentModal() {
 		}
 		m.Modal = ModalState{Type: ModalNone}
 
+	case ModalEditRoute:
+		if m.SelectedRoute < 0 || m.SelectedRoute >= len(m.Mesh.Routes) {
+			m.Modal = ModalState{Type: ModalNone}
+			return
+		}
+		oldRoute := &m.Mesh.Routes[m.SelectedRoute]
+		newName := m.getFieldValue("Имя маршрута")
+		pathStr := m.getFieldValue("Путь (через запятую)")
+		exit := m.getFieldValue("Выходной сервер (Exit)")
+		protStr := strings.ToLower(m.getFieldValue("Защита маршрута"))
+
+		if newName == "" || pathStr == "" {
+			m.LogMsg = "⚠️ Ошибка: имя и путь маршрута не могут быть пустыми!"
+			return
+		}
+		if m.isRouteNameTaken(newName, m.SelectedRoute) {
+			m.LogMsg = fmt.Sprintf("⚠️ Ошибка: Имя маршрута %q уже занято!", newName)
+			return
+		}
+
+		hops := splitTrimTUI(pathStr)
+		if len(hops) > 0 && hops[0] != config.ClientHop {
+			hops = append([]string{config.ClientHop}, hops...)
+		}
+		if exit == "" && len(hops) > 1 {
+			exit = hops[len(hops)-1]
+		}
+
+		oldRoute.Name = newName
+		oldRoute.Path = hops
+		oldRoute.ExitNode = exit
+		oldRoute.Protected = protStr == "да (protected: true)" || protStr == "y" || protStr == "yes"
+
+		m.IsDirty = true
+		_ = config.Save(m.ConfigPath, m.Mesh)
+		m.LogMsg = fmt.Sprintf("✔ Настройки маршрута %q сохранены!", newName)
+		m.Modal = ModalState{Type: ModalNone}
+
 	case ModalAddClient:
 		name := m.getFieldValue("Имя клиента (устройства)")
 		ingress := m.getFieldValue("Нода подключения (Ingress)")
 		if name != "" {
+			if m.isClientNameTaken(name, -1) {
+				m.LogMsg = fmt.Sprintf("⚠️ Ошибка: Имя клиента %q уже занято!", name)
+				return
+			}
 			if strings.HasPrefix(ingress, "(") {
 				ingress = ""
 			}
@@ -501,10 +619,42 @@ func (m *Model) submitCurrentModal() {
 		}
 		m.Modal = ModalState{Type: ModalNone}
 
+	case ModalEditClient:
+		if m.SelectedClient < 0 || m.SelectedClient >= len(m.Mesh.Clients) {
+			m.Modal = ModalState{Type: ModalNone}
+			return
+		}
+		oldClient := &m.Mesh.Clients[m.SelectedClient]
+		newName := m.getFieldValue("Имя клиента (устройства)")
+		ingress := m.getFieldValue("Нода подключения (Ingress)")
+
+		if newName == "" {
+			m.LogMsg = "⚠️ Ошибка: имя клиента не может быть пустым!"
+			return
+		}
+		if m.isClientNameTaken(newName, m.SelectedClient) {
+			m.LogMsg = fmt.Sprintf("⚠️ Ошибка: Имя клиента %q уже занято!", newName)
+			return
+		}
+		if strings.HasPrefix(ingress, "(") {
+			ingress = ""
+		}
+
+		oldClient.Name = newName
+		oldClient.Ingress = ingress
+		m.IsDirty = true
+		_ = config.Save(m.ConfigPath, m.Mesh)
+		m.LogMsg = fmt.Sprintf("✔ Настройки клиента %q сохранены!", newName)
+		m.Modal = ModalState{Type: ModalNone}
+
 	case ModalAddList:
 		name := m.getFieldValue("Имя списка")
 		domStr := m.getFieldValue("Домены (через запятую)")
 		if name != "" {
+			if m.isListNameTaken(name, -1) {
+				m.LogMsg = fmt.Sprintf("⚠️ Ошибка: Имя списка %q уже занято!", name)
+				return
+			}
 			doms := splitTrimTUI(domStr)
 			l := config.DomainList{
 				Name:    name,
@@ -515,6 +665,31 @@ func (m *Model) submitCurrentModal() {
 			_ = config.Save(m.ConfigPath, m.Mesh)
 			m.LogMsg = fmt.Sprintf("✔ Список доменов %q добавлен", name)
 		}
+		m.Modal = ModalState{Type: ModalNone}
+
+	case ModalEditList:
+		if m.SelectedList < 0 || m.SelectedList >= len(m.Mesh.Lists) {
+			m.Modal = ModalState{Type: ModalNone}
+			return
+		}
+		oldList := &m.Mesh.Lists[m.SelectedList]
+		newName := m.getFieldValue("Имя списка")
+		domStr := m.getFieldValue("Домены (через запятую)")
+
+		if newName == "" {
+			m.LogMsg = "⚠️ Ошибка: имя списка не может быть пустым!"
+			return
+		}
+		if m.isListNameTaken(newName, m.SelectedList) {
+			m.LogMsg = fmt.Sprintf("⚠️ Ошибка: Имя списка %q уже занято!", newName)
+			return
+		}
+
+		oldList.Name = newName
+		oldList.Domains = splitTrimTUI(domStr)
+		m.IsDirty = true
+		_ = config.Save(m.ConfigPath, m.Mesh)
+		m.LogMsg = fmt.Sprintf("✔ Настройки списка %q сохранены!", newName)
 		m.Modal = ModalState{Type: ModalNone}
 
 	case ModalGit:
@@ -627,22 +802,175 @@ func (m *Model) openAddListModal() {
 	}
 }
 
+func (m *Model) isNodeNameTaken(name string, excludeIdx int) bool {
+	for i, n := range m.Mesh.Nodes {
+		if i != excludeIdx && strings.EqualFold(n.Name, name) {
+			return true
+		}
+	}
+	return false
+}
+
+func (m *Model) isRouteNameTaken(name string, excludeIdx int) bool {
+	for i, r := range m.Mesh.Routes {
+		if i != excludeIdx && strings.EqualFold(r.Name, name) {
+			return true
+		}
+	}
+	return false
+}
+
+func (m *Model) isClientNameTaken(name string, excludeIdx int) bool {
+	for i, c := range m.Mesh.Clients {
+		if i != excludeIdx && strings.EqualFold(c.Name, name) {
+			return true
+		}
+	}
+	return false
+}
+
+func (m *Model) isListNameTaken(name string, excludeIdx int) bool {
+	for i, l := range m.Mesh.Lists {
+		if i != excludeIdx && strings.EqualFold(l.Name, name) {
+			return true
+		}
+	}
+	return false
+}
+
+func (m *Model) renameNode(oldName, newName string) {
+	if oldName == "" || newName == "" || oldName == newName {
+		return
+	}
+	for i := range m.Mesh.Routes {
+		r := &m.Mesh.Routes[i]
+		for j := range r.Path {
+			if r.Path[j] == oldName {
+				r.Path[j] = newName
+			}
+		}
+		if r.ExitNode == oldName {
+			r.ExitNode = newName
+		}
+	}
+	for i := range m.Mesh.Clients {
+		c := &m.Mesh.Clients[i]
+		if c.Ingress == oldName {
+			c.Ingress = newName
+		}
+	}
+}
+
+func (m *Model) openEditNodeModal() {
+	if len(m.Mesh.Nodes) == 0 || m.SelectedNode < 0 || m.SelectedNode >= len(m.Mesh.Nodes) {
+		return
+	}
+	node := &m.Mesh.Nodes[m.SelectedNode]
+	typeOpt := 0
+	switch node.Type {
+	case config.TypeMikrotik:
+		typeOpt = 1
+	case config.TypeOpenWRT:
+		typeOpt = 2
+	}
+	protOpt := 0
+	if node.Protected {
+		protOpt = 1
+	}
+
+	m.Modal = ModalState{
+		Type: ModalEditNode,
+		Fields: []FormField{
+			{Label: "Имя ноды", Value: node.Name},
+			{Label: "IP / Хост ноды", Value: node.Host},
+			{Label: "Пароль SSH (для автозагрузки ключа)", Mask: true},
+			{Label: "Тип платформы", Options: []string{"linux", "mikrotik", "openwrt"}, OptionIdx: typeOpt, Value: node.Type},
+			{Label: "SSH Пользователь", Value: node.SSHUser},
+			{Label: "Защита от удаления", Options: []string{"нет", "да (protected: true)"}, OptionIdx: protOpt, Value: []string{"нет", "да (protected: true)"}[protOpt]},
+		},
+	}
+}
+
+func (m *Model) openEditClientModal() {
+	if len(m.Mesh.Clients) == 0 || m.SelectedClient < 0 || m.SelectedClient >= len(m.Mesh.Clients) {
+		return
+	}
+	c := &m.Mesh.Clients[m.SelectedClient]
+	nodeNames := m.nodeNamesList()
+	ingOpt := 0
+	for i, name := range nodeNames {
+		if name == c.Ingress {
+			ingOpt = i
+			break
+		}
+	}
+	m.Modal = ModalState{
+		Type: ModalEditClient,
+		Fields: []FormField{
+			{Label: "Имя клиента (устройства)", Value: c.Name},
+			{Label: "Нода подключения (Ingress)", Options: nodeNames, OptionIdx: ingOpt, Value: nodeNames[ingOpt]},
+		},
+	}
+}
+
+func (m *Model) openEditListModal() {
+	if len(m.Mesh.Lists) == 0 || m.SelectedList < 0 || m.SelectedList >= len(m.Mesh.Lists) {
+		return
+	}
+	l := &m.Mesh.Lists[m.SelectedList]
+	m.Modal = ModalState{
+		Type: ModalEditList,
+		Fields: []FormField{
+			{Label: "Имя списка", Value: l.Name},
+			{Label: "Домены (через запятую)", Value: strings.Join(l.Domains, ", ")},
+		},
+	}
+}
+
 func (m *Model) openEditRouteModal() {
-	if len(m.Mesh.Routes) == 0 || m.SelectedRoute >= len(m.Mesh.Routes) {
+	if len(m.Mesh.Routes) == 0 || m.SelectedRoute < 0 || m.SelectedRoute >= len(m.Mesh.Routes) {
 		return
 	}
 	r := &m.Mesh.Routes[m.SelectedRoute]
-	if r.Protected {
+	if r.Protected && m.Modal.Type != ModalConfirm {
 		m.Modal = ModalState{
 			Type:          ModalConfirm,
 			ConfirmPrompt: fmt.Sprintf("Маршрут %q помечен как защищённый (protected: true)! Вы действительно хотите его отредактировать?", r.Name),
 			OnConfirm: func(mod *Model) {
-				mod.openAddRouteModal()
+				mod.showEditRouteForm()
 			},
 		}
 		return
 	}
-	m.openAddRouteModal()
+	m.showEditRouteForm()
+}
+
+func (m *Model) showEditRouteForm() {
+	if len(m.Mesh.Routes) == 0 || m.SelectedRoute < 0 || m.SelectedRoute >= len(m.Mesh.Routes) {
+		return
+	}
+	r := &m.Mesh.Routes[m.SelectedRoute]
+	nodeNames := m.nodeNamesList()
+	exitOpt := 0
+	for i, name := range nodeNames {
+		if name == r.ExitNode {
+			exitOpt = i
+			break
+		}
+	}
+	protOpt := 0
+	if r.Protected {
+		protOpt = 1
+	}
+	m.Modal = ModalState{
+		Type: ModalEditRoute,
+		Fields: []FormField{
+			{Label: "Имя маршрута", Value: r.Name},
+			{Label: "Путь (через запятую)", Value: strings.Join(r.Path, ", ")},
+			{Label: "Выходной сервер (Exit)", Options: nodeNames, OptionIdx: exitOpt, Value: nodeNames[exitOpt]},
+			{Label: "Защита маршрута", Options: []string{"нет", "да (protected: true)"}, OptionIdx: protOpt, Value: []string{"нет", "да (protected: true)"}[protOpt]},
+		},
+	}
 }
 
 func (m *Model) handleDeleteCurrent() {
