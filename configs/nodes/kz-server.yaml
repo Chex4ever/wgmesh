@@ -1,0 +1,17 @@
+# Детали одной ноды (опциональный формат; основной конфиг — mesh.yaml).
+# Поля GENERATED заполняются автоматически при `meshctl apply`.
+name: "kz-server"
+type: "linux"
+host: "109.248.198.55"
+ssh_user: "root"
+ssh_key: "~/.ssh/id_rsa"
+
+wireguard:
+  interface: "wg0"
+  listen_port: 51820
+  private_key: "GENERATED"   # заполняется автоматически
+  public_key: "GENERATED"    # заполняется автоматически
+
+mesh_ip: "10.66.0.10"        # раздаётся автоматически из cidr
+
+peers: []                    # заполняется автоматически при apply

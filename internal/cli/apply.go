@@ -119,17 +119,22 @@ func buildNodeSpec(mgr *mesh.Manager, m *config.Mesh, p mesh.NodePlan) *drivers.
 		Address:    node.MeshIP + "/24",
 		ListenPort: node.WireGuard.ListenPort,
 	}
-	// peers: соседние ноды цепочек
+	// peers: соседние ноды цепочек.
+	// Если сосед — exit-нода хотя бы одного маршрута, добавляем в его AllowedIPs
+	// mesh-подсеть целиком: трафик клиентов (0.0.0.0/0 на клиенте и на relay-хопах
+	// предыдущего звена) должен доставляться до exit-ноды через промежуточные хопы.
 	for _, peerName := range p.PeerNames {
 		peer := m.NodeByName(peerName)
 		if peer == nil {
 			continue
 		}
-		asExit := peer.Name == "" // placeholder; AllowedIPs ниже
-		_ = asExit
+		allowed := []string{peer.MeshIP + "/32"}
+		if isExitNode(m, peer.Name) {
+			allowed = append(allowed, m.CIDROrDefault())
+		}
 		nc.Peers = append(nc.Peers, wg.PeerConf{
 			PublicKey:  peer.WireGuard.PublicKey,
-			AllowedIPs: []string{peer.MeshIP + "/32"},
+			AllowedIPs: allowed,
 			Endpoint:   fmt.Sprintf("%s:%d", peer.Host, peer.WireGuard.ListenPort),
 		})
 	}
@@ -170,4 +175,14 @@ func routeIndex(m *config.Mesh, name string) int {
 		}
 	}
 	return 0
+}
+
+// isExitNode — является ли нода exit_node хотя бы для одного маршрута.
+func isExitNode(m *config.Mesh, name string) bool {
+	for _, r := range m.Routes {
+		if r.ExitNode == name {
+			return true
+		}
+	}
+	return false
 }

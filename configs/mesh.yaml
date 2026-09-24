@@ -1,0 +1,45 @@
+# Пример главного конфига mesh-сети (см. Plan-001.md, раздел «Конфигурация»).
+# Ключи private_key/public_key и mesh_ip заполняются автоматически при `meshctl apply`.
+name: "My Mesh Network"
+version: 1
+cidr: 10.66.0.0/24
+
+nodes:
+  - name: "kz-server"
+    type: "linux"
+    host: "109.248.198.55"
+    ssh_user: "root"
+    ssh_key: "~/.ssh/id_rsa"
+    wireguard:
+      interface: "wg0"
+      listen_port: 51820
+
+  - name: "de-server"
+    type: "linux"
+    host: "194.87.71.7"
+    ssh_user: "root"
+    ssh_key: "~/.ssh/id_rsa"
+    wireguard:
+      interface: "wg0"
+      listen_port: 51821
+
+  - name: "home-router"
+    type: "mikrotik"          # драйвер — Фаза 3
+    host: "192.168.1.1"
+    ssh_user: "admin"
+    wireguard:
+      interface: "wg-home"
+      listen_port: 51822
+
+routes:
+  - name: "via-kz"
+    path: ["client", "kz-server"]
+    exit_node: "kz-server"
+
+  - name: "via-kz-de"
+    path: ["client", "kz-server", "de-server"]
+    exit_node: "de-server"
+
+  - name: "via-de-kz"
+    path: ["client", "de-server", "kz-server"]
+    exit_node: "kz-server"

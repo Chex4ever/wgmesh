@@ -365,11 +365,11 @@ GOOS=darwin GOARCH=amd64 go build -o meshctl-darwin-amd64
 
 См. историю коммитов Git и чек-листы ниже (обновляется по ходу работ).
 
-- [ ] Фаза 1: скелет проекта (go.mod, структура каталогов)
-- [ ] Фаза 1: config types + loader + save
-- [ ] Фаза 1: WG keygen + валидация (validator)
-- [ ] Фаза 1: CLI: init / node add|list|remove / route add|list|remove
-- [ ] Фаза 1: client-config (генерация .conf + QR)
-- [ ] Фаза 1: apply (dry-run + план) + mesh manager
-- [ ] Фаза 1: Linux driver (SSH, wg-quick, iptables)
-- [ ] Тесты, README, примеры конфигов, install.sh
+- [x] Фаза 1: скелет проекта (go.mod, структура каталогов)
+- [x] Фаза 1: config types + loader + save
+- [x] Фаза 1: WG keygen + валидация (validator)
+- [x] Фаза 1: CLI: init / node add|list|remove / route add|list|remove
+- [x] Фаза 1: client-config (генерация .conf + QR)
+- [x] Фаза 1: apply (dry-run + план) + mesh manager
+- [x] Фаза 1: Linux driver (SSH, wg-quick, iptables)
+- [x] Тесты, README, примеры конфигов, install.sh
