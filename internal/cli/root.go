@@ -14,6 +14,8 @@ var cfgPath string
 
 // Execute — точка входа CLI.
 func Execute() {
+	cobra.MousetrapHelpText = ""
+
 	root := &cobra.Command{
 		Use:   "wgmesh",
 		Short: "wgmesh — менеджер WireGuard mesh-сетей (multihop exit-маршруты)",
