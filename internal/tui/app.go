@@ -127,14 +127,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.Height = msg.Height
 
 	case tea.KeyMsg:
-		key := msg.String()
+		rawKey := msg.String()
 
 		// 1. Если открыто модальное окно — обработка модального ввода
 		if m.Modal.Type != ModalNone {
-			return m.handleModalKey(key)
+			return m.handleModalKey(rawKey)
 		}
 
-		// 2. Глобальные и панельные горячие клавиши
+		// 2. Нормализация русской раскладки в латинские хоткеи
+		key := normalizeKey(rawKey)
+
+		// 3. Глобальные и панельные горячие клавиши
 		switch key {
 		case "q", "ctrl+c":
 			return m, tea.Quit
@@ -194,6 +197,32 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "g":
 			m.openGitModal()
 
+		case "enter", "space":
+			switch m.ActivePane {
+			case PaneNodes:
+				if m.SelectedNode == len(m.Mesh.Nodes) {
+					m.openAddNodeModal()
+				} else if m.SelectedNode == len(m.Mesh.Nodes)+1 {
+					m.openBootstrapModal()
+				} else {
+					m.handleCapabilities()
+				}
+			case PaneRoutes:
+				if m.SelectedRoute == len(m.Mesh.Routes) {
+					m.openAddRouteModal()
+				} else {
+					m.openEditRouteModal()
+				}
+			case PaneClients:
+				if m.SelectedClient == len(m.Mesh.Clients) {
+					m.openAddClientModal()
+				}
+			case PaneLists:
+				if m.SelectedList == len(m.Mesh.Lists) {
+					m.openAddListModal()
+				}
+			}
+
 		case "up":
 			m.moveSelection(-1)
 
@@ -211,25 +240,42 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+func normalizeKey(key string) string {
+	cyrToLat := map[rune]rune{
+		'й': 'q', 'ц': 'w', 'у': 'e', 'к': 'r', 'е': 't', 'н': 'y', 'г': 'u', 'ш': 'i', 'щ': 'o', 'з': 'p',
+		'ф': 'a', 'ы': 's', 'в': 'd', 'а': 'f', 'п': 'g', 'р': 'h', 'о': 'j', 'л': 'k', 'д': 'l',
+		'я': 'z', 'ч': 'x', 'с': 'c', 'м': 'v', 'и': 'b', 'т': 'n', 'ь': 'm',
+		'Й': 'q', 'Ц': 'w', 'У': 'e', 'К': 'r', 'Е': 't', 'Н': 'y', 'Г': 'u', 'Ш': 'i', 'Щ': 'o', 'З': 'p',
+		'Ф': 'a', 'Ы': 's', 'В': 'd', 'А': 'f', 'П': 'g', 'Р': 'h', 'О': 'j', 'Л': 'k', 'Д': 'l',
+		'Я': 'z', 'Ч': 'x', 'С': 'c', 'М': 'v', 'И': 'b', 'Т': 'n', 'Ь': 'm',
+	}
+
+	runes := []rune(key)
+	if len(runes) == 1 {
+		if lat, ok := cyrToLat[runes[0]]; ok {
+			return string(lat)
+		}
+	}
+	return key
+}
+
 func (m *Model) moveSelection(delta int) {
 	switch m.ActivePane {
 	case PaneTopology, PaneRoutes:
-		if len(m.Mesh.Routes) > 0 {
-			m.SelectedRoute = (m.SelectedRoute + delta + len(m.Mesh.Routes)) % len(m.Mesh.Routes)
+		maxItems := len(m.Mesh.Routes) + 1
+		m.SelectedRoute = (m.SelectedRoute + delta + maxItems) % maxItems
+		if m.SelectedRoute < len(m.Mesh.Routes) {
 			m.Editor.RouteIdx = m.SelectedRoute
 		}
 	case PaneNodes:
-		if len(m.Mesh.Nodes) > 0 {
-			m.SelectedNode = (m.SelectedNode + delta + len(m.Mesh.Nodes)) % len(m.Mesh.Nodes)
-		}
+		maxItems := len(m.Mesh.Nodes) + 2
+		m.SelectedNode = (m.SelectedNode + delta + maxItems) % maxItems
 	case PaneClients:
-		if len(m.Mesh.Clients) > 0 {
-			m.SelectedClient = (m.SelectedClient + delta + len(m.Mesh.Clients)) % len(m.Mesh.Clients)
-		}
+		maxItems := len(m.Mesh.Clients) + 1
+		m.SelectedClient = (m.SelectedClient + delta + maxItems) % maxItems
 	case PaneLists:
-		if len(m.Mesh.Lists) > 0 {
-			m.SelectedList = (m.SelectedList + delta + len(m.Mesh.Lists)) % len(m.Mesh.Lists)
-		}
+		maxItems := len(m.Mesh.Lists) + 1
+		m.SelectedList = (m.SelectedList + delta + maxItems) % maxItems
 	}
 }
 
@@ -238,7 +284,7 @@ func (m *Model) addHopToSelectedRoute() {
 		m.LogMsg = "ℹ️ Для создания маршрута сначала добавьте хотя бы один сервер/роутер (нажмите 'b' для Bootstrap или 'n')"
 		return
 	}
-	if len(m.Mesh.Routes) > 0 {
+	if len(m.Mesh.Routes) > 0 && m.SelectedRoute < len(m.Mesh.Routes) {
 		r := &m.Mesh.Routes[m.SelectedRoute]
 		if r.Protected {
 			m.LogMsg = fmt.Sprintf("⚠️ Маршрут %q защищён (protected: true) — редактирование запрещено", r.Name)
@@ -255,7 +301,7 @@ func (m *Model) addHopToSelectedRoute() {
 }
 
 func (m *Model) removeHopFromSelectedRoute() {
-	if len(m.Mesh.Routes) > 0 {
+	if len(m.Mesh.Routes) > 0 && m.SelectedRoute < len(m.Mesh.Routes) {
 		r := &m.Mesh.Routes[m.SelectedRoute]
 		if r.Protected {
 			m.LogMsg = fmt.Sprintf("⚠️ Маршрут %q защищён (protected: true) — редактирование запрещено", r.Name)
@@ -272,6 +318,8 @@ func (m *Model) removeHopFromSelectedRoute() {
 }
 
 func (m *Model) handleModalKey(key string) (Model, tea.Cmd) {
+	normKey := normalizeKey(key)
+
 	if len(m.Modal.Fields) > 0 && m.Modal.ActiveField < len(m.Modal.Fields) {
 		f := &m.Modal.Fields[m.Modal.ActiveField]
 		if len(f.Options) > 0 {
@@ -319,19 +367,23 @@ func (m *Model) handleModalKey(key string) (Model, tea.Cmd) {
 		if len(m.Modal.Fields) > 0 {
 			f := &m.Modal.Fields[m.Modal.ActiveField]
 			if len(f.Options) == 0 && len(f.Value) > 0 {
-				f.Value = f.Value[:len(f.Value)-1]
+				runes := []rune(f.Value)
+				f.Value = string(runes[:len(runes)-1])
 			}
 		}
 
 	case "enter":
 		m.submitCurrentModal()
 
-	case "w", "a", "u", "q":
+	default:
 		if m.Modal.Type == ModalExport {
-			m.handleExportFormat(key)
+			switch normKey {
+			case "w", "a", "s", "u", "q":
+				m.handleExportFormat(normKey)
+				return *m, nil
+			}
 		}
 
-	default:
 		if len(key) == 1 && len(m.Modal.Fields) > 0 {
 			f := &m.Modal.Fields[m.Modal.ActiveField]
 			if len(f.Options) == 0 {
