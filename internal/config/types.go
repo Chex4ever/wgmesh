@@ -7,13 +7,14 @@ const DefaultConfigFile = "mesh.yaml"
 
 // Mesh — главный конфигурационный файл (mesh.yaml).
 type Mesh struct {
-	Name    string       `yaml:"name"`
-	Version int          `yaml:"version"`
-	CIDR    string       `yaml:"cidr,omitempty"` // mesh-подсеть, по умолчанию 10.66.0.0/24
-	Nodes   []Node       `yaml:"nodes"`
-	Clients []Client     `yaml:"clients,omitempty"`
-	Lists   []DomainList `yaml:"lists,omitempty"`
-	Routes  []Route      `yaml:"routes"`
+	Name     string       `yaml:"name"`
+	Version  int          `yaml:"version"`
+	Language string       `yaml:"language,omitempty"` // "auto", "en", "ru" (default: "auto")
+	CIDR     string       `yaml:"cidr,omitempty"`     // mesh-подсеть, по умолчанию 10.66.0.0/24
+	Nodes    []Node       `yaml:"nodes"`
+	Clients  []Client     `yaml:"clients,omitempty"`
+	Lists    []DomainList `yaml:"lists,omitempty"`
+	Routes   []Route      `yaml:"routes"`
 }
 
 // Client — клиентское устройство/пользователь.

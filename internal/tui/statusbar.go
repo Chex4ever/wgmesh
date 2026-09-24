@@ -1,11 +1,11 @@
 package tui
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/meshctl/meshctl/internal/config"
+	"github.com/meshctl/meshctl/internal/i18n"
 )
 
 var (
@@ -29,11 +29,10 @@ func RenderStatusBar(m *config.Mesh, configPath string, isDirty bool, activePane
 
 	dirtyText := ""
 	if isDirty {
-		dirtyText = unsavedStyle.Render(" * [НЕ СОХРАНЕНО — нажмите 's']")
+		dirtyText = unsavedStyle.Render(i18n.T("status_unsaved"))
 	}
 
-	leftInfo := fmt.Sprintf("Узлы: %d | Маршруты: %d | %s%s",
-		nodeCount, routeCount, configPath, dirtyText)
+	leftInfo := i18n.T("status_info", nodeCount, routeCount, configPath, dirtyText)
 
 	hintItems := []string{
 		"[s] Save",

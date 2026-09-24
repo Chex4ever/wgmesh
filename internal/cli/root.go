@@ -7,10 +7,14 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/meshctl/meshctl/internal/config"
+	"github.com/meshctl/meshctl/internal/i18n"
 )
 
 // cfgPath — путь к главному конфигу, флаг --config.
 var cfgPath string
+
+// langFlag — флаг языка локализации --lang (auto, en, ru).
+var langFlag string
 
 // Execute — точка входа CLI.
 func Execute() {
@@ -24,10 +28,24 @@ func Execute() {
 несколько хопов, один бинарник без центрального сервера.`,
 		SilenceUsage:  true,
 		SilenceErrors: true,
-		RunE:          runTUICmd,
+		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			if langFlag != "" {
+				i18n.SetLanguage(langFlag)
+			} else {
+				if m, err := config.Load(cfgPath); err == nil && m.Language != "" {
+					i18n.SetLanguage(m.Language)
+				} else {
+					i18n.SetLanguage("auto")
+				}
+			}
+			return nil
+		},
+		RunE: runTUICmd,
 	}
 	root.PersistentFlags().StringVar(&cfgPath, "config", config.DefaultConfigFile,
 		"путь к главному YAML-конфигу")
+	root.PersistentFlags().StringVar(&langFlag, "lang", "",
+		"язык интерфейса / UI language (auto, en, ru)")
 
 	root.AddCommand(
 		initCmd(),

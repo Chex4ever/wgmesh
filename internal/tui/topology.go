@@ -6,6 +6,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/meshctl/meshctl/internal/config"
+	"github.com/meshctl/meshctl/internal/i18n"
 )
 
 var (
@@ -36,20 +37,11 @@ func RenderTopology(m *config.Mesh, activeRouteIdx int, width int) string {
 		if len(m.Nodes) == 0 {
 			return lipgloss.NewStyle().
 				Foreground(lipgloss.Color("214")).
-				Render(
-					"[INFO] Карта топологии пока пуста. Для старта:\n" +
-						"   1. Нажмите [b] для подключения первого сервера/роутера по SSH (Bootstrap)\n" +
-						"   2. Нажмите [r] для создания первого exit-маршрута\n" +
-						"   3. Нажмите [a] для быстрой настройки узлов по SSH (Apply)",
-				)
+				Render(i18n.T("topology_empty_nodes"))
 		}
 		return lipgloss.NewStyle().
 			Foreground(lipgloss.Color("86")).
-			Render(
-				"[INFO] Узлы добавлены, но маршруты еще не настроены:\n" +
-					"   1. Нажмите [r] для создания первого маршрута через узел\n" +
-					"   2. Нажмите [a] для применения конфигурации по SSH",
-			)
+			Render(i18n.T("topology_empty_routes"))
 	}
 
 	var sb strings.Builder

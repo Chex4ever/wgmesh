@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/meshctl/meshctl/internal/i18n"
 )
 
 func renderModalOverlay(m Model) string {
@@ -14,23 +15,23 @@ func renderModalOverlay(m Model) string {
 	case ModalHelp:
 		body = renderHelpContent()
 	case ModalBootstrapNode:
-		body = renderFormModal("🚀 Zero-Touch SSH Bootstrap Ноды", m.Modal)
+		body = renderFormModal(i18n.T("modal_bootstrap"), m.Modal)
 	case ModalAddNode:
-		body = renderFormModal("➕ Добавление Ноды", m.Modal)
+		body = renderFormModal(i18n.T("modal_add_node"), m.Modal)
 	case ModalEditNode:
-		body = renderFormModal("✏️ Настройки и Редактирование Ноды", m.Modal)
+		body = renderFormModal(i18n.T("modal_edit_node"), m.Modal)
 	case ModalAddRoute:
-		body = renderFormModal("➕ Создание Маршрута", m.Modal)
+		body = renderFormModal(i18n.T("modal_add_route"), m.Modal)
 	case ModalEditRoute:
-		body = renderFormModal("✏️ Редактирование Маршрута", m.Modal)
+		body = renderFormModal(i18n.T("modal_edit_route"), m.Modal)
 	case ModalAddClient:
-		body = renderFormModal("👤 Добавление Клиента", m.Modal)
+		body = renderFormModal(i18n.T("modal_add_client"), m.Modal)
 	case ModalEditClient:
-		body = renderFormModal("✏️ Настройки Клиента", m.Modal)
+		body = renderFormModal(i18n.T("modal_edit_client"), m.Modal)
 	case ModalAddList:
-		body = renderFormModal("🌐 Добавление Доменного Списка", m.Modal)
+		body = renderFormModal(i18n.T("modal_add_list"), m.Modal)
 	case ModalEditList:
-		body = renderFormModal("✏️ Редактирование Доменного Списка", m.Modal)
+		body = renderFormModal(i18n.T("modal_edit_list"), m.Modal)
 	case ModalConfirm:
 		body = renderConfirmModal(m.Modal)
 	case ModalDoctor:
@@ -138,17 +139,17 @@ func renderFormModal(title string, state ModalState) string {
 
 func renderConfirmModal(state ModalState) string {
 	var sb strings.Builder
-	sb.WriteString(warnStyle.Render("⚠️  ЗАЩИТА ЭЛЕМЕНТА (protected: true)") + "\n\n")
+	sb.WriteString(warnStyle.Render(i18n.T("modal_confirm_prot")) + "\n\n")
 	sb.WriteString(state.ConfirmPrompt + "\n\n")
 	sb.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("86")).Render(
-		"Нажмите [y] для подтверждения  |  [n / Esc] для отмены",
+		i18n.T("modal_confirm_hint"),
 	))
 	return sb.String()
 }
 
 func renderDoctorModal(state ModalState) string {
 	var sb strings.Builder
-	sb.WriteString(titleStyle.Render("🏥 wgmesh Doctor — Глубокая Диагностика") + "\n")
+	sb.WriteString(titleStyle.Render(i18n.T("modal_doctor_title")) + "\n")
 	sb.WriteString("------------------------------------------------------------------\n\n")
 
 	for _, line := range state.DoctorOutput {
@@ -157,14 +158,14 @@ func renderDoctorModal(state ModalState) string {
 
 	sb.WriteString("\n------------------------------------------------------------------\n")
 	if state.DoctorStatus == "GREEN" {
-		sb.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("82")).Bold(true).Render("🟢 Итоговый статус: GREEN (Сеть полностью здорова)"))
+		sb.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("82")).Bold(true).Render(i18n.T("doctor_green")))
 	} else if state.DoctorStatus == "YELLOW" {
-		sb.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("214")).Bold(true).Render("🟡 Итоговый статус: YELLOW (Есть предупреждения)"))
+		sb.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("214")).Bold(true).Render(i18n.T("doctor_yellow")))
 	} else {
-		sb.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("196")).Bold(true).Render("🔴 Итоговый статус: RED (Критические ошибки)"))
+		sb.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("196")).Bold(true).Render(i18n.T("doctor_red")))
 	}
 	sb.WriteString("\n\n" + lipgloss.NewStyle().Foreground(lipgloss.Color("243")).Render(
-		"[r] Запустить повторно | [Esc] Закрыть",
+		"[r] Retry | [Esc] Close",
 	))
 
 	return sb.String()
@@ -172,20 +173,20 @@ func renderDoctorModal(state ModalState) string {
 
 func renderExportModal(state ModalState) string {
 	var sb strings.Builder
-	sb.WriteString(titleStyle.Render("📦 Экспорт Клиентского Профиля & QR-Код") + "\n\n")
+	sb.WriteString(titleStyle.Render(i18n.T("modal_export_title")) + "\n\n")
 
 	if state.ShowQR && state.QRString != "" {
 		sb.WriteString(state.QRString + "\n\n")
 	} else if state.ExportData != "" {
 		lines := strings.Split(state.ExportData, "\n")
 		if len(lines) > 15 {
-			lines = append(lines[:15], "… (конфиг усечён для вывода)")
+			lines = append(lines[:15], "…")
 		}
 		sb.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("252")).Render(strings.Join(lines, "\n")) + "\n\n")
 	}
 
 	sb.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("243")).Render(
-		"[w] WireGuard | [a] Amnezia | [s] Sing-box | [u] URI | [q] QR-код | [Esc] Закрыть",
+		"[w] WireGuard | [a] Amnezia | [s] Sing-box | [u] URI | [q] QR-code | [Esc] Close",
 	))
 
 	return sb.String()
@@ -193,18 +194,18 @@ func renderExportModal(state ModalState) string {
 
 func renderCapModal(state ModalState) string {
 	var sb strings.Builder
-	sb.WriteString(titleStyle.Render("💻 Возможности Платформы Драйвера") + "\n\n")
+	sb.WriteString(titleStyle.Render(i18n.T("modal_caps_title")) + "\n\n")
 	sb.WriteString(state.CapText + "\n\n")
 	sb.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("243")).Render(
-		"[Esc] Закрыть",
+		"[Esc] Close",
 	))
 	return sb.String()
 }
 
 func renderGitModal(state ModalState) string {
 	var sb strings.Builder
-	sb.WriteString(titleStyle.Render("🐙 Git Синхронизация Конфигурации") + "\n\n")
-	sb.WriteString("Статус репозитория:\n")
+	sb.WriteString(titleStyle.Render(i18n.T("modal_git_title")) + "\n\n")
+	sb.WriteString("Status:\n")
 	sb.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("250")).Render(state.GitStatus) + "\n\n")
 
 	for i, f := range state.Fields {
@@ -220,28 +221,28 @@ func renderGitModal(state ModalState) string {
 	}
 
 	sb.WriteString("\n" + lipgloss.NewStyle().Foreground(lipgloss.Color("243")).Render(
-		"[Enter] Commit & Push  |  [Esc] Закрыть",
+		"[Enter] Commit & Push  |  [Esc] Close",
 	))
 	return sb.String()
 }
 
 func renderUpdateModal(state ModalState) string {
 	var sb strings.Builder
-	sb.WriteString(titleStyle.Render("🔄 Авто-обновление wgmesh") + "\n\n")
+	sb.WriteString(titleStyle.Render(i18n.T("modal_update_title")) + "\n\n")
 
 	if state.UpdateStatus != "" {
 		sb.WriteString(state.UpdateStatus + "\n\n")
 	}
 
 	if state.IsUpdating {
-		sb.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("214")).Bold(true).Render("⏳ Скачивание и запуск скрипта обновления...") + "\n\n")
+		sb.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("214")).Bold(true).Render(i18n.T("update_installing")) + "\n\n")
 	} else if state.HasUpdate {
 		sb.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("86")).Render(
-			"[Enter] Установить обновление  |  [Esc] Отмена",
+			"[Enter] Install Update  |  [Esc] Cancel",
 		))
 	} else {
 		sb.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("243")).Render(
-			"[Esc] Закрыть",
+			"[Esc] Close",
 		))
 	}
 
@@ -249,32 +250,8 @@ func renderUpdateModal(state ModalState) string {
 }
 
 func renderHelpContent() string {
-	return titleStyle.Render("═══ Справка по клавишам wgmesh TUI ═══") + `
-
-  [Tab] / [Shift+Tab]   — Навигация по панелям (Топология, Узлы, Маршруты, Клиенты, Списки, Редактор)
-  [↑ / ↓] или [j / k]   — Перемещение по элементам текущей панели
-  [+] / [-]             — Быстрое добавление/удаление хопа в цепочке маршрута
-
-Команды управления:
-  [b]                   — 🚀 Zero-Touch SSH Bootstrap новой ноды (с автоподключением по паролю)
-  [n]                   — ➕ Добавить ноду в конфиг
-  [r]                   — ➕ Создать новый exit-маршрут
-  [c]                   — 👤 Добавить клиента (с интерактивным выбором ноды подключения)
-  [l]                   — 🌐 Добавить список доменов/IP (Split Tunneling)
-  [e]                   — ✏️ Изменить выбранный маршрут
-  [Del] / [x]           — 🗑️ Удалить выбранный узел / маршрут / клиент
-  [t]                   — 🧼 Teardown WG-конфига с ноды по SSH
-  [k]                   — 💻 Показать технологические возможности ноды
-
-Система и Экспорт:
-  [a]                   — ⚡ Применить всю конфигурацию на сервера по SSH (Apply)
-  [d]                   — 🏥 wgmesh Doctor (Полная диагностика сети)
-  [x]                   — 📦 Экспорт профиля / Генерация ASCII QR-кода
-  [g]                   — 🐙 Git status, Commit & Push в репозиторий
-  [u]                   — 🔄 Проверить и установить авто-обновление
-  [s]                   — 💾 Сохранить изменения в mesh.yaml
-  [?]                   — ❓ Справка по горячим клавишам
-  [q] / [Ctrl+C]        — 🚪 Выход из TUI
-`
-
+	return titleStyle.Render(i18n.T("modal_help_title")) + "\n\n" +
+		i18n.T("help_nav") + "\n\n" +
+		i18n.T("help_ctrl") + "\n\n" +
+		i18n.T("help_sys") + "\n"
 }

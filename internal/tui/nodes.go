@@ -6,6 +6,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/meshctl/meshctl/internal/config"
+	"github.com/meshctl/meshctl/internal/i18n"
 )
 
 var (
@@ -35,7 +36,7 @@ var (
 // RenderNodesPane отображает список нод сети и интерактивные кнопки добавления.
 func RenderNodesPane(m *config.Mesh, selectedIdx, hoverIdx int, isPressed bool, isActive bool, width, height int) string {
 	var sb strings.Builder
-	sb.WriteString("Список узлов (Nodes):\n\n")
+	sb.WriteString(i18n.T("pane_nodes") + "\n\n")
 
 	nodeCount := len(m.Nodes)
 	for i, n := range m.Nodes {
@@ -49,7 +50,7 @@ func RenderNodesPane(m *config.Mesh, selectedIdx, hoverIdx int, isPressed bool, 
 
 		ip := n.MeshIP
 		if ip == "" {
-			ip = "авто"
+			ip = "auto"
 		}
 
 		protBadge := ""
@@ -78,7 +79,7 @@ func RenderNodesPane(m *config.Mesh, selectedIdx, hoverIdx int, isPressed bool, 
 	addBtnIdx := nodeCount
 	bootBtnIdx := nodeCount + 1
 
-	addBtnText := "[+ Добавить ноду ('n')]"
+	addBtnText := i18n.T("btn_add_node")
 	addSt := lipgloss.NewStyle().Foreground(lipgloss.Color("244"))
 	addPrefix := "  "
 	if selectedIdx == addBtnIdx {
@@ -94,7 +95,7 @@ func RenderNodesPane(m *config.Mesh, selectedIdx, hoverIdx int, isPressed bool, 
 	}
 	sb.WriteString(addSt.Render(fmt.Sprintf("%s%s", addPrefix, addBtnText)) + "\n")
 
-	bootBtnText := "[SSH Bootstrap ноды ('b')]"
+	bootBtnText := i18n.T("btn_bootstrap_node")
 	bootSt := lipgloss.NewStyle().Foreground(lipgloss.Color("244"))
 	bootPrefix := "  "
 	if selectedIdx == bootBtnIdx {

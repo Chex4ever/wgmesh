@@ -6,12 +6,13 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/meshctl/meshctl/internal/config"
+	"github.com/meshctl/meshctl/internal/i18n"
 )
 
 // RenderRoutesPane отображает список маршрутов и интерактивную кнопку создания.
 func RenderRoutesPane(m *config.Mesh, selectedIdx, hoverIdx int, isPressed bool, isActive bool, width, height int) string {
 	var sb strings.Builder
-	sb.WriteString("Список маршрутов (Routes):\n\n")
+	sb.WriteString(i18n.T("pane_routes") + "\n\n")
 
 	routeCount := len(m.Routes)
 	for i, r := range m.Routes {
@@ -39,7 +40,7 @@ func RenderRoutesPane(m *config.Mesh, selectedIdx, hoverIdx int, isPressed bool,
 	}
 
 	addBtnIdx := routeCount
-	addBtnText := "[+ Создать маршрут ('r')]"
+	addBtnText := i18n.T("btn_add_route")
 	addSt := lipgloss.NewStyle().Foreground(lipgloss.Color("244"))
 	addPrefix := "  "
 	if selectedIdx == addBtnIdx {

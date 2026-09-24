@@ -6,12 +6,13 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/meshctl/meshctl/internal/config"
+	"github.com/meshctl/meshctl/internal/i18n"
 )
 
 // RenderListsPane отображает список доменов/IP для селективного туннелирования и кнопку добавления.
 func RenderListsPane(m *config.Mesh, selectedIdx, hoverIdx int, isPressed bool, isActive bool, width, height int) string {
 	var sb strings.Builder
-	sb.WriteString("Списки доменов/IP (Split Tunneling):\n\n")
+	sb.WriteString(i18n.T("pane_lists") + "\n\n")
 
 	listCount := len(m.Lists)
 	for i, l := range m.Lists {
@@ -36,7 +37,7 @@ func RenderListsPane(m *config.Mesh, selectedIdx, hoverIdx int, isPressed bool, 
 	}
 
 	addBtnIdx := listCount
-	addBtnText := "[+ Добавить список ('l')]"
+	addBtnText := i18n.T("btn_add_list")
 	addSt := lipgloss.NewStyle().Foreground(lipgloss.Color("244"))
 	addPrefix := "  "
 	if selectedIdx == addBtnIdx {

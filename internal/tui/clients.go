@@ -6,22 +6,23 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/meshctl/meshctl/internal/config"
+	"github.com/meshctl/meshctl/internal/i18n"
 )
 
 // RenderClientsPane отображает список клиентских устройств и кнопку добавления.
 func RenderClientsPane(m *config.Mesh, selectedIdx, hoverIdx int, isPressed bool, isActive bool, width, height int) string {
 	var sb strings.Builder
-	sb.WriteString("Список клиентов (Clients):\n\n")
+	sb.WriteString(i18n.T("pane_clients") + "\n\n")
 
 	clientCount := len(m.Clients)
 	for i, c := range m.Clients {
 		ip := c.IP
 		if ip == "" {
-			ip = "авто"
+			ip = "auto"
 		}
 		ingress := c.Ingress
 		if ingress == "" {
-			ingress = "не назначен"
+			ingress = "-"
 		}
 		line := fmt.Sprintf("%-10s [%s] -> %s", c.Name, ip, ingress)
 
@@ -42,7 +43,7 @@ func RenderClientsPane(m *config.Mesh, selectedIdx, hoverIdx int, isPressed bool
 	}
 
 	addBtnIdx := clientCount
-	addBtnText := "[+ Добавить клиента ('c')]"
+	addBtnText := i18n.T("btn_add_client")
 	addSt := lipgloss.NewStyle().Foreground(lipgloss.Color("244"))
 	addPrefix := "  "
 	if selectedIdx == addBtnIdx {

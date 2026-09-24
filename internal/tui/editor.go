@@ -6,6 +6,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/meshctl/meshctl/internal/config"
+	"github.com/meshctl/meshctl/internal/i18n"
 )
 
 type RouteEditor struct {
@@ -21,14 +22,14 @@ func RenderEditorPane(m *config.Mesh, ed *RouteEditor, hoverHopIdx, hoverBtn int
 	}
 
 	if len(m.Routes) == 0 || ed.RouteIdx < 0 || ed.RouteIdx >= len(m.Routes) {
-		return style.Render("Редактор маршрута: Выберите маршрут для редактирования")
+		return style.Render(i18n.T("pane_editor"))
 	}
 
 	r := &m.Routes[ed.RouteIdx]
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("Редактирование маршрута: %s\n\n", r.Name))
+	sb.WriteString(i18n.T("editor_title", r.Name) + "\n\n")
 
-	sb.WriteString("Цепочка хопов:\n")
+	sb.WriteString(i18n.T("editor_hops") + "\n")
 	var elements []string
 	arrow := arrowStyle.Render(" ---> ")
 
@@ -61,11 +62,11 @@ func RenderEditorPane(m *config.Mesh, ed *RouteEditor, hoverHopIdx, hoverBtn int
 	chain := lipgloss.JoinHorizontal(lipgloss.Center, elements...)
 	sb.WriteString(indentBlock(chain, 3) + "\n\n")
 
-	sb.WriteString(fmt.Sprintf("Exit Node: %s\n\n", r.ExitNode))
+	sb.WriteString(i18n.T("editor_exit_node", r.ExitNode) + "\n\n")
 
-	btn0 := "[+] добавить хоп"
-	btn1 := "[-] удалить хоп"
-	btn2 := "[e] изменить маршрут"
+	btn0 := i18n.T("editor_add_hop")
+	btn1 := i18n.T("editor_remove_hop")
+	btn2 := i18n.T("editor_edit_route")
 
 	st0 := lipgloss.NewStyle().Foreground(lipgloss.Color("243"))
 	st1 := lipgloss.NewStyle().Foreground(lipgloss.Color("243"))

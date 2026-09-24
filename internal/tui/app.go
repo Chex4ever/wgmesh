@@ -20,6 +20,7 @@ import (
 	"github.com/meshctl/meshctl/internal/config"
 	"github.com/meshctl/meshctl/internal/drivers"
 	"github.com/meshctl/meshctl/internal/export"
+	"github.com/meshctl/meshctl/internal/i18n"
 	"github.com/meshctl/meshctl/internal/mesh"
 	"github.com/meshctl/meshctl/internal/updater"
 	"github.com/meshctl/meshctl/internal/wg"
@@ -1372,7 +1373,7 @@ func (m Model) View() string {
 	header := lipgloss.NewStyle().
 		Bold(true).
 		Foreground(lipgloss.Color("86")).
-		Render(fmt.Sprintf("=== Топология сети: %s (версия %s) ===", m.Mesh.Name, m.Version))
+		Render(i18n.T("topology_title", m.Mesh.Name, m.Version))
 
 	topView := RenderTopology(m.Mesh, m.SelectedRoute, totalWidth)
 
