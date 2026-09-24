@@ -41,6 +41,7 @@ type Node struct {
 	Name      string `yaml:"name"`
 	Type      string `yaml:"type"` // linux | mikrotik | openwrt
 	Host      string `yaml:"host"`
+	Protected bool   `yaml:"protected,omitempty"` // Защита от случайного удаления
 	SSHUser   string `yaml:"ssh_user,omitempty"`
 	SSHKey    string `yaml:"ssh_key,omitempty"`
 	SSHPort   int    `yaml:"ssh_port,omitempty"`    // по умолчанию 22
@@ -63,6 +64,7 @@ type WG struct {
 // path[0] всегда "client", далее — имена нод по порядку.
 type Route struct {
 	Name            string            `yaml:"name"`
+	Protected       bool              `yaml:"protected,omitempty"` // Запрет изменения/удаления без подтверждения
 	From            []string          `yaml:"from,omitempty"`             // Имена клиентов или группы
 	Match           TrafficMatch      `yaml:"match,omitempty"`            // Условие выбора трафика
 	Path            []string          `yaml:"path"`                       // Хопы пути

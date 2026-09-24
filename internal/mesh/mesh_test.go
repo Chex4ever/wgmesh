@@ -181,3 +181,13 @@ func TestValidateClientsAndLists(t *testing.T) {
 	m.Routes[0].Match.List = "unknown-list"
 	mustContain(t, Validate(m), "unknown-list")
 }
+
+func TestValidateProtected(t *testing.T) {
+	m := validMesh()
+	m.Nodes[0].Protected = true
+	m.Routes[0].Protected = true
+
+	if err := Validate(m); err != nil {
+		t.Fatalf("валидация защищенных объектов провалена: %v", err)
+	}
+}

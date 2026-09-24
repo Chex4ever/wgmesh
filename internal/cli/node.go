@@ -17,7 +17,7 @@ func nodeCmd() *cobra.Command {
 		Use:   "node",
 		Short: "Управление нодами mesh-сети",
 	}
-	cmd.AddCommand(nodeAddCmd(), nodeListCmd(), nodeRemoveCmd(), nodeTeardownCmd(), nodeCapsCmd())
+	cmd.AddCommand(nodeAddCmd(), nodeBootstrapCmd(), nodeListCmd(), nodeRemoveCmd(), nodeTeardownCmd(), nodeCapsCmd())
 	return cmd
 }
 
@@ -25,6 +25,7 @@ func nodeAddCmd() *cobra.Command {
 	var (
 		nType, host, user, key, iface string
 		port, wgPort                  int
+		protected                     bool
 	)
 	cmd := &cobra.Command{
 		Use:   "add <name>",
@@ -40,12 +41,13 @@ func nodeAddCmd() *cobra.Command {
 				return fmt.Errorf("нода %q уже существует", name)
 			}
 			node := config.Node{
-				Name:    name,
-				Type:    nType,
-				Host:    host,
-				SSHUser: user,
-				SSHKey:  key,
-				SSHPort: port,
+				Name:      name,
+				Type:      nType,
+				Host:      host,
+				SSHUser:   user,
+				SSHKey:    key,
+				SSHPort:   port,
+				Protected: protected,
 				WireGuard: config.WG{
 					Interface:  iface,
 					ListenPort: wgPort,
@@ -69,6 +71,7 @@ func nodeAddCmd() *cobra.Command {
 	cmd.Flags().IntVar(&port, "ssh-port", 22, "порт SSH")
 	cmd.Flags().StringVar(&iface, "wg-interface", "wg0", "имя WireGuard-интерфейса")
 	cmd.Flags().IntVar(&wgPort, "wg-port", 51820, "порт прослушивания WireGuard")
+	cmd.Flags().BoolVar(&protected, "protected", false, "защитить ноду от случайного удаления (protected: true)")
 	return cmd
 }
 
@@ -89,7 +92,7 @@ func nodeListCmd() *cobra.Command {
 				return enc.Encode(m.Nodes)
 			}
 			w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 4, 2, ' ', 0)
-			fmt.Fprintln(w, "ИМЯ\tТИП\tHOST\tWG IFACE\tPORT\tMESH IP\tКЛЮЧ")
+			fmt.Fprintln(w, "ИМЯ\tТИП\tHOST\tWG IFACE\tPORT\tMESH IP\tКЛЮЧ\tPROTECTED")
 			for _, n := range m.Nodes {
 				keyState := "—"
 				if n.SSHKey != "" {
@@ -101,12 +104,16 @@ func nodeListCmd() *cobra.Command {
 				if n.WireGuard.PublicKey != "" {
 					pub = "есть"
 				}
-				fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%d\t%s\t%s/%s\n",
+				prot := "—"
+				if n.Protected {
+					prot = "YES"
+				}
+				fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%d\t%s\t%s/%s\t%s\n",
 					n.Name, n.Type, n.Host, n.WireGuard.Interface, n.WireGuard.ListenPort,
-					orDash(n.MeshIP), keyState, pub)
+					orDash(n.MeshIP), keyState, pub, prot)
 			}
 			if len(m.Nodes) == 0 {
-				fmt.Fprintln(w, "(нет нод — добавьте через: meshctl node add <name> --host <ip>)")
+				fmt.Fprintln(w, "(нет нод — добавьте через: wgmesh node add <name> --host <ip>)")
 			}
 			return w.Flush()
 		},
@@ -116,7 +123,8 @@ func nodeListCmd() *cobra.Command {
 }
 
 func nodeRemoveCmd() *cobra.Command {
-	return &cobra.Command{
+	var force bool
+	cmd := &cobra.Command{
 		Use:   "remove <name>",
 		Short: "Удалить ноду (и ссылки из маршрутов)",
 		Args:  cobra.ExactArgs(1),
@@ -126,10 +134,20 @@ func nodeRemoveCmd() *cobra.Command {
 				return err
 			}
 			name := args[0]
-			if m.NodeByName(name) == nil {
+			node := m.NodeByName(name)
+			if node == nil {
 				return fmt.Errorf("нода %q не найдена", name)
 			}
-			// запрещаем удаление, если нода участвует в маршрутах, без явного согласия
+
+			if node.Protected && !force {
+				fmt.Printf("⚠️  ВНИМАНИЕ: Нода %q помечена как защищённая (protected: true)!\n", name)
+				confirmed, err := confirmPrompt(cmd, fmt.Sprintf("Вы уверены, что хотите удалить защищённую ноду %q?", name))
+				if err != nil || !confirmed {
+					return fmt.Errorf("операция отменена пользователем")
+				}
+			}
+
+			// запрещаем удаление, если нода участвует в маршрутах, без --force
 			var affected []string
 			for _, r := range m.Routes {
 				for _, p := range r.Path {
@@ -139,8 +157,8 @@ func nodeRemoveCmd() *cobra.Command {
 					}
 				}
 			}
-			if len(affected) > 0 {
-				return fmt.Errorf("нода %q участвует в маршрутах %v — сначала удалите/поправьте их (meshctl route remove <name>)", name, affected)
+			if len(affected) > 0 && !force {
+				return fmt.Errorf("нода %q участвует в маршрутах %v — сначала удалите/поправьте их (wgmesh route remove <name>) или используйте --force", name, affected)
 			}
 			var nodes []config.Node
 			for _, n := range m.Nodes {
@@ -156,6 +174,8 @@ func nodeRemoveCmd() *cobra.Command {
 			return nil
 		},
 	}
+	cmd.Flags().BoolVarP(&force, "force", "f", false, "пропустить подтверждение для защищённых нод")
+	return cmd
 }
 
 func nodeTeardownCmd() *cobra.Command {

@@ -22,7 +22,10 @@ func routeCmd() *cobra.Command {
 }
 
 func routeAddCmd() *cobra.Command {
-	var pathStr, exit string
+	var (
+		pathStr, exit string
+		protected     bool
+	)
 	cmd := &cobra.Command{
 		Use:   "add <name>",
 		Short: "Создать маршрут: --path client,nodeA,nodeB --exit nodeB",
@@ -40,7 +43,7 @@ func routeAddCmd() *cobra.Command {
 			if len(path) == 0 || path[0] != config.ClientHop {
 				return fmt.Errorf("--path должен начинаться с 'client', например: client,%s", strings.Join(nodeNames(m), ","))
 			}
-			r := config.Route{Name: name, Path: path, ExitNode: exit}
+			r := config.Route{Name: name, Path: path, ExitNode: exit, Protected: protected}
 			if r.ExitNode == "" && len(path) > 1 {
 				r.ExitNode = path[len(path)-1] // по умолчанию — последний хоп
 			}
@@ -58,6 +61,7 @@ func routeAddCmd() *cobra.Command {
 	}
 	cmd.Flags().StringVar(&pathStr, "path", "", "цепочка через запятую, начиная с client")
 	cmd.Flags().StringVar(&exit, "exit", "", "exit-нода (по умолчанию последняя в --path)")
+	cmd.Flags().BoolVar(&protected, "protected", false, "защитить маршрут от случайных изменений (protected: true)")
 	return cmd
 }
 
@@ -78,12 +82,16 @@ func routeListCmd() *cobra.Command {
 				return enc.Encode(m.Routes)
 			}
 			w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 4, 2, ' ', 0)
-			fmt.Fprintln(w, "ИМЯ\tПУТЬ\tEXIT")
+			fmt.Fprintln(w, "ИМЯ\tПУТЬ\tEXIT\tPROTECTED")
 			for _, r := range m.Routes {
-				fmt.Fprintf(w, "%s\t%s\t%s\n", r.Name, strings.Join(r.Path, " → "), r.ExitNode)
+				prot := "—"
+				if r.Protected {
+					prot = "YES"
+				}
+				fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", r.Name, strings.Join(r.Path, " → "), r.ExitNode, prot)
 			}
 			if len(m.Routes) == 0 {
-				fmt.Fprintln(w, "(нет маршрутов — добавьте: meshctl route add via-1 --path client,<node>)")
+				fmt.Fprintln(w, "(нет маршрутов — добавьте: wgmesh route add via-1 --path client,<node>)")
 			}
 			return w.Flush()
 		},
@@ -93,7 +101,8 @@ func routeListCmd() *cobra.Command {
 }
 
 func routeRemoveCmd() *cobra.Command {
-	return &cobra.Command{
+	var force bool
+	cmd := &cobra.Command{
 		Use:   "remove <name>",
 		Short: "Удалить маршрут",
 		Args:  cobra.ExactArgs(1),
@@ -103,13 +112,23 @@ func routeRemoveCmd() *cobra.Command {
 				return err
 			}
 			name := args[0]
-			if m.RouteByName(name) == nil {
+			r := m.RouteByName(name)
+			if r == nil {
 				return fmt.Errorf("маршрут %q не найден", name)
 			}
+
+			if r.Protected && !force {
+				fmt.Printf("⚠️  ВНИМАНИЕ: Маршрут %q помечен как защищённый (protected: true)!\n", name)
+				confirmed, err := confirmPrompt(cmd, fmt.Sprintf("Вы уверены, что хотите удалить защищённый маршрут %q?", name))
+				if err != nil || !confirmed {
+					return fmt.Errorf("операция отменена пользователем")
+				}
+			}
+
 			var routes []config.Route
-			for _, r := range m.Routes {
-				if r.Name != name {
-					routes = append(routes, r)
+			for _, item := range m.Routes {
+				if item.Name != name {
+					routes = append(routes, item)
 				}
 			}
 			m.Routes = routes
@@ -120,10 +139,15 @@ func routeRemoveCmd() *cobra.Command {
 			return nil
 		},
 	}
+	cmd.Flags().BoolVarP(&force, "force", "f", false, "пропустить подтверждение для защищённых маршрутов")
+	return cmd
 }
 
 func routeEditCmd() *cobra.Command {
-	var pathStr, exit string
+	var (
+		pathStr, exit string
+		force         bool
+	)
 	cmd := &cobra.Command{
 		Use:   "edit <name>",
 		Short: "Изменить существующий маршрут: --path client,nodeA,nodeB --exit nodeB",
@@ -138,6 +162,15 @@ func routeEditCmd() *cobra.Command {
 			if r == nil {
 				return fmt.Errorf("маршрут %q не найден", name)
 			}
+
+			if r.Protected && !force {
+				fmt.Printf("⚠️  ВНИМАНИЕ: Маршрут %q помечен как защищённый (protected: true)!\n", name)
+				confirmed, err := confirmPrompt(cmd, fmt.Sprintf("Вы уверены, что хотите изменить защищённый маршрут %q?", name))
+				if err != nil || !confirmed {
+					return fmt.Errorf("операция отменена пользователем")
+				}
+			}
+
 			if pathStr != "" {
 				path := splitTrim(pathStr)
 				if len(path) == 0 || path[0] != config.ClientHop {
@@ -162,6 +195,7 @@ func routeEditCmd() *cobra.Command {
 	}
 	cmd.Flags().StringVar(&pathStr, "path", "", "цепочка через запятую, начиная с client")
 	cmd.Flags().StringVar(&exit, "exit", "", "exit-нода (по умолчанию последняя в --path)")
+	cmd.Flags().BoolVarP(&force, "force", "f", false, "пропустить подтверждение для защищённых маршрутов")
 	return cmd
 }
 

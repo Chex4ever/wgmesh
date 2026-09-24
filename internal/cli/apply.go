@@ -100,7 +100,7 @@ func applyCmd() *cobra.Command {
 			if len(failed) > 0 {
 				return fmt.Errorf("не удалось применить на нодах: %v", failed)
 			}
-			fmt.Println("✔ Mesh применён. Клиентские конфиги: meshctl client-config <route>")
+			fmt.Println("✔ Mesh применён. Клиентские конфиги: wgmesh export client <route>")
 			return nil
 		},
 	}

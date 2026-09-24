@@ -39,6 +39,7 @@ func Execute() {
 		applyCmd(),
 		clientConfigCmd(),
 		tuiCmd(),
+		doctorCmd(),
 		versionCmd(),
 	)
 

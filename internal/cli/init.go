@@ -27,9 +27,9 @@ func initCmd() *cobra.Command {
 				return err
 			}
 			fmt.Printf("✔ Создан %s (сеть %q). Дальше:\n", cfgPath, m.Name)
-			fmt.Println("  meshctl node add <name> --type linux --host <ip> --user root")
-			fmt.Println("  meshctl route add via-1 --path client,<name> --exit <name>")
-			fmt.Println("  meshctl apply && meshctl client-config via-1 --qr")
+			fmt.Println("  wgmesh node bootstrap <name> --host <ip>")
+			fmt.Println("  wgmesh route add via-1 --path client,<name> --exit <name>")
+			fmt.Println("  wgmesh apply && wgmesh export client via-1 --qr")
 			return nil
 		},
 	}
