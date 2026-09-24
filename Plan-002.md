@@ -287,14 +287,14 @@ exit_node ≠ последний hop. Добавляем:
 
 ## 9. Чек-лист выполнения (обновлять по ходу)
 
-- [ ] M1 AllowedIPsForPeer
-- [ ] M2 buildNodeSpec на новом API
-- [ ] M3 персистентный ip_forward
-- [ ] M4 идемпотентный рендер
-- [ ] M5 e2e 3-hop
-- [ ] TUI: app / topology / nodes / routes / editor / statusbar / keys
-- [ ] sshx + TOFU known_hosts
-- [ ] V1–V5 валидация + preflight
-- [ ] C1–C4 CLI-доработки
-- [ ] Тесты T-* , coverage-гейт
-- [ ] README/док-и, отметка в Plan-001
+- [x] M1 AllowedIPsForPeer
+- [x] M2 buildNodeSpec на новом API
+- [x] M3 персистентный ip_forward
+- [x] M4 идемпотентный рендер
+- [x] M5 e2e 3-hop
+- [x] TUI: app / topology / nodes / routes / editor / statusbar / keys
+- [x] sshx + TOFU known_hosts
+- [x] V1–V5 валидация + preflight
+- [x] C1–C4 CLI-доработки
+- [x] Тесты T-* , coverage-гейт
+- [x] README/док-и, отметка в Plan-001

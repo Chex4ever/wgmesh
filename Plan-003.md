@@ -268,10 +268,10 @@ func RunSteps(steps []Step) error // выполняет, при ошибке —
 
 ## 9. Чек-лист выполнения
 
-- [ ] §1 Driver v2 + миграция linux + caps
-- [ ] §4 rollback framework + teardown/status CLI
-- [ ] §2 routeros пакет (client/parser/generator) + unit
-- [ ] §2 mikrotik e2e на железе (manual log в PR)
-- [ ] §3 openwrt пакет + UCI generator + unit
-- [ ] §5 TUI detail/refresh, параллельный apply
-- [ ] §7 AC-гейт, README, отметка в Plan-001
+- [x] §1 Driver v2 + миграция linux + caps
+- [x] §4 rollback framework + teardown/status CLI
+- [x] §2 routeros пакет (client/parser/generator) + unit
+- [x] §2 mikrotik e2e на железе (manual log в PR)
+- [x] §3 openwrt пакет + UCI generator + unit
+- [x] §5 TUI detail/refresh, параллельный apply
+- [x] §7 AC-гейт, README, отметка в Plan-001

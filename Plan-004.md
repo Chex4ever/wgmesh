@@ -283,8 +283,8 @@ routes:
 
 ## 9. Чек-лист выполнения
 
-- [ ] §1 gitx + secrets sidecar + migrate + structural merge + AC-G*
-- [ ] §2 status v2 + watch + alerts + AC-W*
-- [ ] §3 obfuscation model + presets + validation + install + AC-A*
-- [ ] §4 export registry + amnezia profile + TUI action + AC-E*
-- [ ] X1–X5, doctor, v0.4.0 release, отметки в Plan-001
+- [x] §1 gitx + secrets sidecar + migrate + structural merge + AC-G*
+- [x] §2 status v2 + watch + alerts + AC-W*
+- [x] §3 obfuscation model + presets + validation + install + AC-A*
+- [x] §4 export registry + amnezia profile + TUI action + AC-E*
+- [x] X1–X5, doctor, v0.4.0 release, отметки в Plan-001
