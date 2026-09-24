@@ -157,6 +157,32 @@ wgmesh
 
 ## 🛠️ Сборка и установка
 
+### 🚀 Быстрая установка и запуск на Windows
+
+Скачать готовый `wgmesh.exe` из [GitHub Release](https://github.com/Chex4ever/wgmesh/releases/latest) и сразу запустить одной командой:
+
+**Командная строка (CMD):**
+```cmd
+curl -sL https://github.com/Chex4ever/wgmesh/releases/latest/download/wgmesh.exe -o wgmesh.exe && wgmesh.exe
+```
+
+**PowerShell:**
+```powershell
+Invoke-WebRequest -Uri "https://github.com/Chex4ever/wgmesh/releases/latest/download/wgmesh.exe" -OutFile "wgmesh.exe"; .\wgmesh.exe
+```
+
+---
+
+### 🔄 Авто-обновление
+
+Вы можете в любой момент проверить и установить актуальную версию:
+- **В TUI**: нажмите клавишу **`u`**
+- **В CLI**: выполните команду `wgmesh update`
+
+---
+
+### 📦 Сборка из исходников
+
 ```bash
 git clone https://github.com/Chex4ever/wgmesh
 cd wgmesh
