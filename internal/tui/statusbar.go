@@ -28,13 +28,13 @@ func RenderStatusBar(m *config.Mesh, configPath string, isDirty bool, activePane
 
 	dirtyText := ""
 	if isDirty {
-		dirtyText = unsavedStyle.Render(" * [не сохранено]")
+		dirtyText = unsavedStyle.Render(" * [НЕ СОХРАНЕНО — нажмите 's']")
 	}
 
-	leftInfo := fmt.Sprintf("Ноды: %d | Маршруты: %d | Конфиг: %s%s",
+	leftInfo := fmt.Sprintf("Узлы: %d | Маршруты: %d | %s%s",
 		nodeCount, routeCount, configPath, dirtyText)
 
-	hints := keyHintStyle.Render("[Tab] Панель | [b] Bootstrap | [a] Apply | [d] Doctor | [x] Export | [g] Git | [?] Help")
+	hints := keyHintStyle.Render("[s] Save | [a] Apply | [b] Bootstrap | [d] Doctor | [x] Export | [g] Git | [?] Help | [q] Quit")
 
 	totalWidth := width - 4
 	if totalWidth < 40 {

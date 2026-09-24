@@ -72,8 +72,10 @@ func RenderTopology(m *config.Mesh, activeRouteIdx int, width int) string {
 }
 
 func renderRouteChain(m *config.Mesh, r *config.Route, isSelected bool) string {
-	var parts []string
-	parts = append(parts, renderBox("Client", isSelected))
+	var elements []string
+	arrow := arrowStyle.Render(" ──▶ ")
+
+	elements = append(elements, renderBox("Client", isSelected))
 
 	for _, hopName := range r.Hops() {
 		node := m.NodeByName(hopName)
@@ -88,13 +90,13 @@ func renderRouteChain(m *config.Mesh, r *config.Route, isSelected bool) string {
 				label = fmt.Sprintf("● %s", hopName)
 			}
 		}
-		parts = append(parts, renderBox(label, isSelected))
+		elements = append(elements, arrow, renderBox(label, isSelected))
 	}
 
-	parts = append(parts, renderBox("🌐 Internet", isSelected))
+	elements = append(elements, arrow, renderBox("Internet", isSelected))
 
-	arrow := arrowStyle.Render(" ──▶ ")
-	return "   " + strings.Join(parts, arrow)
+	chain := lipgloss.JoinHorizontal(lipgloss.Center, elements...)
+	return "   " + chain
 }
 
 func renderBox(text string, isSelected bool) string {

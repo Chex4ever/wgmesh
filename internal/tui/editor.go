@@ -28,21 +28,26 @@ func RenderEditorPane(m *config.Mesh, ed *RouteEditor, isActive bool, width int)
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("Редактирование маршрута: %s\n\n", r.Name))
 
-	sb.WriteString("Цепочка хопов:\n   ")
+	sb.WriteString("Цепочка хопов:\n")
+	var elements []string
+	arrow := arrowStyle.Render(" ──▶ ")
+
 	for i, hop := range r.Path {
-		box := hop
+		box := ""
 		if i == ed.SelectedHop {
 			box = selectedBoxStyle.Render(fmt.Sprintf("[%s]", hop))
 		} else {
 			box = boxStyle.Render(hop)
 		}
-		sb.WriteString(box)
-		if i < len(r.Path)-1 {
-			sb.WriteString(" ──▶ ")
+		if i > 0 {
+			elements = append(elements, arrow)
 		}
+		elements = append(elements, box)
 	}
 
-	sb.WriteString("\n\n")
+	chain := lipgloss.JoinHorizontal(lipgloss.Center, elements...)
+	sb.WriteString("   " + chain + "\n\n")
+
 	sb.WriteString(fmt.Sprintf("Exit Node: %s\n\n", r.ExitNode))
 
 	hints := lipgloss.NewStyle().Foreground(lipgloss.Color("243")).Render(
