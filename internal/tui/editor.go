@@ -14,7 +14,7 @@ type RouteEditor struct {
 }
 
 // RenderEditorPane отображает интерактивный редактор выбранного маршрута.
-func RenderEditorPane(m *config.Mesh, ed *RouteEditor, isActive bool, width int) string {
+func RenderEditorPane(m *config.Mesh, ed *RouteEditor, hoverHopIdx, hoverBtn int, isActive bool, width int) string {
 	style := paneStyle.Width(width)
 	if isActive {
 		style = activePaneStyle.Width(width)
@@ -34,11 +34,20 @@ func RenderEditorPane(m *config.Mesh, ed *RouteEditor, isActive bool, width int)
 
 	for i, hop := range r.Path {
 		box := ""
+		st := boxStyle
 		if i == ed.SelectedHop {
-			box = selectedBoxStyle.Render(fmt.Sprintf("[%s]", hop))
-		} else {
-			box = boxStyle.Render(hop)
+			st = selectedBoxStyle
 		}
+		if i == hoverHopIdx {
+			st = st.Copy().Underline(true)
+		}
+
+		if i == ed.SelectedHop {
+			box = st.Render(fmt.Sprintf("[%s]", hop))
+		} else {
+			box = st.Render(hop)
+		}
+
 		if i > 0 {
 			elements = append(elements, arrow)
 		}
@@ -50,8 +59,25 @@ func RenderEditorPane(m *config.Mesh, ed *RouteEditor, isActive bool, width int)
 
 	sb.WriteString(fmt.Sprintf("Exit Node: %s\n\n", r.ExitNode))
 
-	hints := lipgloss.NewStyle().Foreground(lipgloss.Color("243")).Render(
-		"[+] добавить хоп | [-] удалить хоп | [e] изменить маршрут")
+	btn0 := "[+] добавить хоп"
+	btn1 := "[-] удалить хоп"
+	btn2 := "[e] изменить маршрут"
+
+	st0 := lipgloss.NewStyle().Foreground(lipgloss.Color("243"))
+	st1 := lipgloss.NewStyle().Foreground(lipgloss.Color("243"))
+	st2 := lipgloss.NewStyle().Foreground(lipgloss.Color("243"))
+
+	if hoverBtn == 0 {
+		st0 = st0.Underline(true)
+	}
+	if hoverBtn == 1 {
+		st1 = st1.Underline(true)
+	}
+	if hoverBtn == 2 {
+		st2 = st2.Underline(true)
+	}
+
+	hints := fmt.Sprintf("%s | %s | %s", st0.Render(btn0), st1.Render(btn1), st2.Render(btn2))
 	sb.WriteString(hints)
 
 	return style.Render(sb.String())

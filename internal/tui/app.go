@@ -94,6 +94,9 @@ type Model struct {
 	Width  int
 	Height int
 
+	HoverX int
+	HoverY int
+
 	LogMsg   string
 	Applying bool
 }
@@ -113,6 +116,8 @@ func NewModel(m *config.Mesh, configPath string) Model {
 		},
 		Width:  100,
 		Height: 30,
+		HoverX: -1,
+		HoverY: -1,
 	}
 }
 
@@ -953,11 +958,102 @@ func (m Model) View() string {
 	)
 
 	paneHeight := 6
-	nodesView := RenderNodesPane(m.Mesh, m.SelectedNode, m.ActivePane == PaneNodes, colWidth, paneHeight)
-	routesView := RenderRoutesPane(m.Mesh, m.SelectedRoute, m.ActivePane == PaneRoutes, colWidth, paneHeight)
-	clientsView := RenderClientsPane(m.Mesh, m.SelectedClient, m.ActivePane == PaneClients, colWidth, paneHeight)
-	listsView := RenderListsPane(m.Mesh, m.SelectedList, m.ActivePane == PaneLists, colWidth, paneHeight)
-	editorView := RenderEditorPane(m.Mesh, &m.Editor, m.ActivePane == PaneEditor, totalWidth)
+	testNodesView := RenderNodesPane(m.Mesh, m.SelectedNode, -1, m.ActivePane == PaneNodes, colWidth, paneHeight)
+	testRoutesView := RenderRoutesPane(m.Mesh, m.SelectedRoute, -1, m.ActivePane == PaneRoutes, colWidth, paneHeight)
+	testClientsView := RenderClientsPane(m.Mesh, m.SelectedClient, -1, m.ActivePane == PaneClients, colWidth, paneHeight)
+	testListsView := RenderListsPane(m.Mesh, m.SelectedList, -1, m.ActivePane == PaneLists, colWidth, paneHeight)
+	testEditorView := RenderEditorPane(m.Mesh, &m.Editor, -1, -1, m.ActivePane == PaneEditor, totalWidth)
+
+	midUpperTest := lipgloss.JoinHorizontal(lipgloss.Top, testNodesView, " ", testRoutesView)
+	midLowerTest := lipgloss.JoinHorizontal(lipgloss.Top, testClientsView, " ", testListsView)
+
+	topHeight := lipgloss.Height(topBox)
+	nodesWidth := lipgloss.Width(testNodesView)
+	midUpperHeight := lipgloss.Height(midUpperTest)
+	midLowerHeight := lipgloss.Height(midLowerTest)
+	editorHeight := lipgloss.Height(testEditorView)
+
+	hoverNodesIdx := -1
+	hoverRoutesIdx := -1
+	hoverClientsIdx := -1
+	hoverListsIdx := -1
+	hoverHopIdx := -1
+	hoverBtnIdx := -1
+	hoverHintIdx := -1
+
+	x := m.HoverX
+	y := m.HoverY
+
+	if x >= 0 && y >= 0 {
+		if y >= topHeight && y < topHeight+midUpperHeight {
+			yRel := y - topHeight - 1
+			if x < nodesWidth {
+				hoverNodesIdx = yRel - 2
+			} else {
+				hoverRoutesIdx = yRel - 2
+			}
+		} else if y >= topHeight+midUpperHeight && y < topHeight+midUpperHeight+midLowerHeight {
+			yRel := y - (topHeight + midUpperHeight) - 1
+			if x < nodesWidth {
+				hoverClientsIdx = yRel - 2
+			} else {
+				hoverListsIdx = yRel - 2
+			}
+		} else if y >= topHeight+midUpperHeight+midLowerHeight && y < topHeight+midUpperHeight+midLowerHeight+editorHeight {
+			yRel := y - (topHeight + midUpperHeight + midLowerHeight) - 1
+			if yRel >= 3 && yRel <= 5 {
+				if len(m.Mesh.Routes) > 0 && m.SelectedRoute < len(m.Mesh.Routes) {
+					if x >= 3 {
+						hoverHopIdx = (x - 3) / 15
+					}
+				}
+			} else if yRel >= 6 {
+				if x < 22 {
+					hoverBtnIdx = 0
+				} else if x < 42 {
+					hoverBtnIdx = 1
+				} else {
+					hoverBtnIdx = 2
+				}
+			}
+		} else if y >= topHeight+midUpperHeight+midLowerHeight+editorHeight {
+			nodeCount := len(m.Mesh.Nodes)
+			routeCount := len(m.Mesh.Routes)
+			dirtyText := ""
+			if m.IsDirty {
+				dirtyText = " * [НЕ СОХРАНЕНО — нажмите 's']"
+			}
+			leftInfo := fmt.Sprintf("Узлы: %d | Маршруты: %d | %s%s", nodeCount, routeCount, m.ConfigPath, dirtyText)
+			leftWidth := len(leftInfo) + 4
+			hintsX := x - leftWidth
+			if hintsX >= 0 {
+				switch {
+				case hintsX <= 10:
+					hoverHintIdx = 0
+				case hintsX <= 22:
+					hoverHintIdx = 1
+				case hintsX <= 38:
+					hoverHintIdx = 2
+				case hintsX <= 51:
+					hoverHintIdx = 3
+				case hintsX <= 64:
+					hoverHintIdx = 4
+				case hintsX <= 74:
+					hoverHintIdx = 5
+				case hintsX <= 85:
+					hoverHintIdx = 6
+				default:
+					hoverHintIdx = 7
+				}
+			}
+		}
+	}
+
+	nodesView := RenderNodesPane(m.Mesh, m.SelectedNode, hoverNodesIdx, m.ActivePane == PaneNodes, colWidth, paneHeight)
+	routesView := RenderRoutesPane(m.Mesh, m.SelectedRoute, hoverRoutesIdx, m.ActivePane == PaneRoutes, colWidth, paneHeight)
+	clientsView := RenderClientsPane(m.Mesh, m.SelectedClient, hoverClientsIdx, m.ActivePane == PaneClients, colWidth, paneHeight)
+	listsView := RenderListsPane(m.Mesh, m.SelectedList, hoverListsIdx, m.ActivePane == PaneLists, colWidth, paneHeight)
+	editorView := RenderEditorPane(m.Mesh, &m.Editor, hoverHopIdx, hoverBtnIdx, m.ActivePane == PaneEditor, totalWidth)
 
 	middleUpper := lipgloss.JoinHorizontal(
 		lipgloss.Top,
@@ -980,7 +1076,7 @@ func (m Model) View() string {
 			Render(fmt.Sprintf(" Лог: %s", m.LogMsg)) + "\n"
 	}
 
-	statusBar := RenderStatusBar(m.Mesh, m.ConfigPath, m.IsDirty, "", m.Width)
+	statusBar := RenderStatusBar(m.Mesh, m.ConfigPath, m.IsDirty, "", hoverHintIdx, m.Width)
 
 	return lipgloss.JoinVertical(
 		lipgloss.Left,

@@ -9,7 +9,7 @@ import (
 )
 
 // RenderRoutesPane отображает список маршрутов и интерактивную кнопку создания.
-func RenderRoutesPane(m *config.Mesh, selectedIdx int, isActive bool, width, height int) string {
+func RenderRoutesPane(m *config.Mesh, selectedIdx, hoverIdx int, isActive bool, width, height int) string {
 	var sb strings.Builder
 	sb.WriteString("Список маршрутов (Routes):\n\n")
 
@@ -22,22 +22,30 @@ func RenderRoutesPane(m *config.Mesh, selectedIdx int, isActive bool, width, hei
 		}
 		line := fmt.Sprintf("%-10s [%s] (%s)%s", r.Name, hopsStr, r.ExitNode, protBadge)
 
+		st := itemNormalStyle
+		prefix := "  "
 		if i == selectedIdx {
-			sb.WriteString(itemSelectedStyle.Render(fmt.Sprintf("► %s", line)))
-		} else {
-			sb.WriteString(itemNormalStyle.Render(fmt.Sprintf("  %s", line)))
+			st = itemSelectedStyle
+			prefix = "► "
 		}
-		sb.WriteString("\n")
+		if i == hoverIdx {
+			st = st.Copy().Underline(true)
+		}
+		sb.WriteString(st.Render(fmt.Sprintf("%s%s", prefix, line)) + "\n")
 	}
 
 	addBtnIdx := routeCount
 	addBtnText := "➕ [+ Создать маршрут ('r')]"
+	addSt := lipgloss.NewStyle().Foreground(lipgloss.Color("244"))
+	addPrefix := "  "
 	if selectedIdx == addBtnIdx {
-		sb.WriteString(itemSelectedStyle.Render(fmt.Sprintf("► %s", addBtnText)))
-	} else {
-		sb.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("244")).Render(fmt.Sprintf("  %s", addBtnText)))
+		addSt = itemSelectedStyle
+		addPrefix = "► "
 	}
-	sb.WriteString("\n")
+	if hoverIdx == addBtnIdx {
+		addSt = addSt.Copy().Underline(true)
+	}
+	sb.WriteString(addSt.Render(fmt.Sprintf("%s%s", addPrefix, addBtnText)) + "\n")
 
 	style := paneStyle.Width(width)
 	if isActive {

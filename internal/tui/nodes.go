@@ -28,7 +28,7 @@ var (
 )
 
 // RenderNodesPane отображает список нод сети и интерактивные кнопки добавления.
-func RenderNodesPane(m *config.Mesh, selectedIdx int, isActive bool, width, height int) string {
+func RenderNodesPane(m *config.Mesh, selectedIdx, hoverIdx int, isActive bool, width, height int) string {
 	var sb strings.Builder
 	sb.WriteString("Список узлов (Nodes):\n\n")
 
@@ -54,32 +54,44 @@ func RenderNodesPane(m *config.Mesh, selectedIdx int, isActive bool, width, heig
 
 		line := fmt.Sprintf("%s %-10s [%-7s] %s%s", icon, n.Name, n.Type, n.Host, protBadge)
 
+		st := itemNormalStyle
+		prefix := "  "
 		if i == selectedIdx {
-			sb.WriteString(itemSelectedStyle.Render(fmt.Sprintf("► %s", line)))
-		} else {
-			sb.WriteString(itemNormalStyle.Render(fmt.Sprintf("  %s", line)))
+			st = itemSelectedStyle
+			prefix = "► "
 		}
-		sb.WriteString("\n")
+		if i == hoverIdx {
+			st = st.Copy().Underline(true)
+		}
+		sb.WriteString(st.Render(fmt.Sprintf("%s%s", prefix, line)) + "\n")
 	}
 
 	addBtnIdx := nodeCount
 	bootBtnIdx := nodeCount + 1
 
 	addBtnText := "➕ [+ Добавить ноду ('n')]"
+	addSt := lipgloss.NewStyle().Foreground(lipgloss.Color("244"))
+	addPrefix := "  "
 	if selectedIdx == addBtnIdx {
-		sb.WriteString(itemSelectedStyle.Render(fmt.Sprintf("► %s", addBtnText)))
-	} else {
-		sb.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("244")).Render(fmt.Sprintf("  %s", addBtnText)))
+		addSt = itemSelectedStyle
+		addPrefix = "► "
 	}
-	sb.WriteString("\n")
+	if hoverIdx == addBtnIdx {
+		addSt = addSt.Copy().Underline(true)
+	}
+	sb.WriteString(addSt.Render(fmt.Sprintf("%s%s", addPrefix, addBtnText)) + "\n")
 
 	bootBtnText := "🚀 [Bootstrap по SSH ('b')]"
+	bootSt := lipgloss.NewStyle().Foreground(lipgloss.Color("244"))
+	bootPrefix := "  "
 	if selectedIdx == bootBtnIdx {
-		sb.WriteString(itemSelectedStyle.Render(fmt.Sprintf("► %s", bootBtnText)))
-	} else {
-		sb.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("244")).Render(fmt.Sprintf("  %s", bootBtnText)))
+		bootSt = itemSelectedStyle
+		bootPrefix = "► "
 	}
-	sb.WriteString("\n")
+	if hoverIdx == bootBtnIdx {
+		bootSt = bootSt.Copy().Underline(true)
+	}
+	sb.WriteString(bootSt.Render(fmt.Sprintf("%s%s", bootPrefix, bootBtnText)) + "\n")
 
 	style := paneStyle.Width(width)
 	if isActive {

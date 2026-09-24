@@ -29,12 +29,12 @@ func TestMouseHandlingPanes(t *testing.T) {
 		t.Logf("Wheel down updated selection")
 	}
 
-	// Test click on Nodes pane area
+	// Test click release on Nodes pane area
 	clickMsg := tea.MouseMsg{
 		X:      10,
 		Y:      10,
-		Type:   tea.MouseLeft,
-		Action: tea.MouseActionPress,
+		Type:   tea.MouseRelease,
+		Action: tea.MouseActionRelease,
 	}
 	newModel, _ = m.Update(clickMsg)
 	m = newModel.(Model)
@@ -42,12 +42,24 @@ func TestMouseHandlingPanes(t *testing.T) {
 		t.Errorf("Expected ActivePane to be PaneNodes, got %v", m.ActivePane)
 	}
 
-	// Test click on Routes pane area
+	// Test hover coordinate tracking
+	motionMsg := tea.MouseMsg{
+		X:      60,
+		Y:      10,
+		Action: tea.MouseActionMotion,
+	}
+	newModel, _ = m.Update(motionMsg)
+	m = newModel.(Model)
+	if m.HoverX != 60 || m.HoverY != 10 {
+		t.Errorf("Expected HoverX=60, HoverY=10, got %d, %d", m.HoverX, m.HoverY)
+	}
+
+	// Test click release on Routes pane area
 	clickRoutes := tea.MouseMsg{
 		X:      60,
 		Y:      10,
-		Type:   tea.MouseLeft,
-		Action: tea.MouseActionPress,
+		Type:   tea.MouseRelease,
+		Action: tea.MouseActionRelease,
 	}
 	newModel, _ = m.Update(clickRoutes)
 	m = newModel.(Model)

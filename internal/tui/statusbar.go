@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/meshctl/meshctl/internal/config"
@@ -22,7 +23,7 @@ var (
 )
 
 // RenderStatusBar формирует нижнюю информационную панель TUI.
-func RenderStatusBar(m *config.Mesh, configPath string, isDirty bool, activePane string, width int) string {
+func RenderStatusBar(m *config.Mesh, configPath string, isDirty bool, activePane string, hoverHintIdx int, width int) string {
 	nodeCount := len(m.Nodes)
 	routeCount := len(m.Routes)
 
@@ -34,7 +35,27 @@ func RenderStatusBar(m *config.Mesh, configPath string, isDirty bool, activePane
 	leftInfo := fmt.Sprintf("Узлы: %d | Маршруты: %d | %s%s",
 		nodeCount, routeCount, configPath, dirtyText)
 
-	hints := keyHintStyle.Render("[s] Save | [a] Apply | [b] Bootstrap | [d] Doctor | [x] Export | [g] Git | [?] Help | [q] Quit")
+	hintItems := []string{
+		"[s] Save",
+		"[a] Apply",
+		"[b] Bootstrap",
+		"[d] Doctor",
+		"[x] Export",
+		"[g] Git",
+		"[?] Help",
+		"[q] Quit",
+	}
+
+	var renderedHints []string
+	for i, h := range hintItems {
+		st := keyHintStyle
+		if i == hoverHintIdx {
+			st = st.Copy().Underline(true)
+		}
+		renderedHints = append(renderedHints, st.Render(h))
+	}
+
+	hints := strings.Join(renderedHints, keyHintStyle.Render(" | "))
 
 	totalWidth := width - 4
 	if totalWidth < 40 {

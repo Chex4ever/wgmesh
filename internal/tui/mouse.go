@@ -7,6 +7,10 @@ import (
 )
 
 func (m *Model) handleMouseMsg(msg tea.MouseMsg) (Model, tea.Cmd) {
+	// Всегда обновляем координаты ховера при любом перемещении или клике мыши
+	m.HoverX = msg.X
+	m.HoverY = msg.Y
+
 	// 1. Колесо мыши для скроллинга навигации
 	if msg.Type == tea.MouseWheelUp {
 		m.moveSelection(-1)
@@ -17,8 +21,10 @@ func (m *Model) handleMouseMsg(msg tea.MouseMsg) (Model, tea.Cmd) {
 		return *m, nil
 	}
 
-	// Фильтруем только клики левой кнопкой мыши
-	if msg.Type != tea.MouseLeft && msg.Action != tea.MouseActionRelease && msg.Action != tea.MouseActionPress {
+	// ВАЖНО: Выполнение действий происходит ИСКЛЮЧИТЕЛЬНО при отпускании кнопки мыши (Release)!
+	// Это предотвращает дублирование и "безумие" при зажатии или движении мыши.
+	isRelease := (msg.Type == tea.MouseRelease || msg.Action == tea.MouseActionRelease)
+	if !isRelease {
 		return *m, nil
 	}
 
@@ -51,11 +57,11 @@ func (m *Model) handleMouseMsg(msg tea.MouseMsg) (Model, tea.Cmd) {
 	topHeight := lipgloss.Height(topBox)
 
 	paneHeight := 6
-	nodesView := RenderNodesPane(m.Mesh, m.SelectedNode, m.ActivePane == PaneNodes, colWidth, paneHeight)
-	routesView := RenderRoutesPane(m.Mesh, m.SelectedRoute, m.ActivePane == PaneRoutes, colWidth, paneHeight)
-	clientsView := RenderClientsPane(m.Mesh, m.SelectedClient, m.ActivePane == PaneClients, colWidth, paneHeight)
-	listsView := RenderListsPane(m.Mesh, m.SelectedList, m.ActivePane == PaneLists, colWidth, paneHeight)
-	editorView := RenderEditorPane(m.Mesh, &m.Editor, m.ActivePane == PaneEditor, totalWidth)
+	nodesView := RenderNodesPane(m.Mesh, m.SelectedNode, -1, m.ActivePane == PaneNodes, colWidth, paneHeight)
+	routesView := RenderRoutesPane(m.Mesh, m.SelectedRoute, -1, m.ActivePane == PaneRoutes, colWidth, paneHeight)
+	clientsView := RenderClientsPane(m.Mesh, m.SelectedClient, -1, m.ActivePane == PaneClients, colWidth, paneHeight)
+	listsView := RenderListsPane(m.Mesh, m.SelectedList, -1, m.ActivePane == PaneLists, colWidth, paneHeight)
+	editorView := RenderEditorPane(m.Mesh, &m.Editor, -1, -1, m.ActivePane == PaneEditor, totalWidth)
 
 	middleUpper := lipgloss.JoinHorizontal(lipgloss.Top, nodesView, " ", routesView)
 	middleLower := lipgloss.JoinHorizontal(lipgloss.Top, clientsView, " ", listsView)
@@ -71,8 +77,8 @@ func (m *Model) handleMouseMsg(msg tea.MouseMsg) (Model, tea.Cmd) {
 	// A. Верхняя панель (PaneTopology)
 	if y >= 0 && y < topHeight {
 		m.ActivePane = PaneTopology
-		yRel := y - 1 // за вычетом верхней рамки
-		topoLine := yRel - 2 // header и пропуск
+		yRel := y - 1
+		topoLine := yRel - 2
 		if len(m.Mesh.Routes) == 0 {
 			if topoLine >= 0 && topoLine <= 4 {
 				if topoLine == 1 {
@@ -98,10 +104,9 @@ func (m *Model) handleMouseMsg(msg tea.MouseMsg) (Model, tea.Cmd) {
 
 	// B. Средняя верхняя секция (Nodes & Routes)
 	if y >= topHeight && y < topHeight+midUpperHeight {
-		yRel := y - topHeight - 1 // относительно содержимого панели
+		yRel := y - topHeight - 1
 
 		if x < nodesWidth {
-			// --- ПАНЕЛЬ НОД (PaneNodes) ---
 			m.ActivePane = PaneNodes
 			nodeCount := len(m.Mesh.Nodes)
 			if yRel >= 2 && yRel < 2+nodeCount {
@@ -114,7 +119,6 @@ func (m *Model) handleMouseMsg(msg tea.MouseMsg) (Model, tea.Cmd) {
 				m.openBootstrapModal()
 			}
 		} else {
-			// --- ПАНЕЛЬ МАРШРУТОВ (PaneRoutes) ---
 			m.ActivePane = PaneRoutes
 			routeCount := len(m.Mesh.Routes)
 			if yRel >= 2 && yRel < 2+routeCount {
@@ -133,7 +137,6 @@ func (m *Model) handleMouseMsg(msg tea.MouseMsg) (Model, tea.Cmd) {
 		yRel := y - (topHeight + midUpperHeight) - 1
 
 		if x < nodesWidth {
-			// --- ПАНЕЛЬ КЛИЕНТОВ (PaneClients) ---
 			m.ActivePane = PaneClients
 			clientCount := len(m.Mesh.Clients)
 			if yRel >= 2 && yRel < 2+clientCount {
@@ -143,7 +146,6 @@ func (m *Model) handleMouseMsg(msg tea.MouseMsg) (Model, tea.Cmd) {
 				m.openAddClientModal()
 			}
 		} else {
-			// --- ПАНЕЛЬ СПИСКОВ (PaneLists) ---
 			m.ActivePane = PaneLists
 			listCount := len(m.Mesh.Lists)
 			if yRel >= 2 && yRel < 2+listCount {
@@ -162,7 +164,6 @@ func (m *Model) handleMouseMsg(msg tea.MouseMsg) (Model, tea.Cmd) {
 		yRel := y - (topHeight + midUpperHeight + midLowerHeight) - 1
 
 		if yRel >= 3 && yRel <= 5 {
-			// Клик по хопу в цепочке
 			if len(m.Mesh.Routes) > 0 && m.SelectedRoute < len(m.Mesh.Routes) {
 				r := &m.Mesh.Routes[m.SelectedRoute]
 				hopWidth := 15
@@ -174,7 +175,6 @@ func (m *Model) handleMouseMsg(msg tea.MouseMsg) (Model, tea.Cmd) {
 				}
 			}
 		} else if yRel >= 6 {
-			// Клик по кнопкам действия в редакторе: [+] добавить хоп | [-] удалить хоп | [e] изменить маршрут
 			if x >= 0 && x < 22 {
 				m.addHopToSelectedRoute()
 			} else if x >= 22 && x < 42 {
@@ -196,9 +196,6 @@ func (m *Model) handleMouseMsg(msg tea.MouseMsg) (Model, tea.Cmd) {
 }
 
 func (m *Model) handleStatusBarClick(x int) {
-	// Подсказки нижней панели:
-	// [s] Save | [a] Apply | [b] Bootstrap | [d] Doctor | [x] Export | [g] Git | [?] Help | [q] Quit
-	// Анализируем клик по секциям или хоткеям
 	nodeCount := len(m.Mesh.Nodes)
 	routeCount := len(m.Mesh.Routes)
 	dirtyText := ""
@@ -222,32 +219,30 @@ func (m *Model) handleStatusBarClick(x int) {
 
 	hintsX := x - leftWidth
 	switch {
-	case hintsX >= 0 && hintsX <= 10: // [s] Save
+	case hintsX >= 0 && hintsX <= 10:
 		if err := config.Save(m.ConfigPath, m.Mesh); err != nil {
 			m.LogMsg = "Ошибка сохранения: " + err.Error()
 		} else {
 			m.IsDirty = false
 			m.LogMsg = "✔ Конфигурация успешно сохранена в " + m.ConfigPath
 		}
-	case hintsX > 10 && hintsX <= 22: // [a] Apply
+	case hintsX > 10 && hintsX <= 22:
 		m.LogMsg = "→ Запуск полного применения (Apply) по SSH…"
 		m.runApply()
-	case hintsX > 22 && hintsX <= 38: // [b] Bootstrap
+	case hintsX > 22 && hintsX <= 38:
 		m.openBootstrapModal()
-	case hintsX > 38 && hintsX <= 51: // [d] Doctor
+	case hintsX > 38 && hintsX <= 51:
 		m.runDoctor()
-	case hintsX > 51 && hintsX <= 64: // [x] Export
+	case hintsX > 51 && hintsX <= 64:
 		if len(m.Mesh.Routes) > 0 && m.SelectedRoute < len(m.Mesh.Routes) {
 			m.handleExportFormat("w")
 		} else {
 			m.LogMsg = "ℹ️ Выберите маршрут для экспорта"
 		}
-	case hintsX > 64 && hintsX <= 74: // [g] Git
+	case hintsX > 64 && hintsX <= 74:
 		m.openGitModal()
-	case hintsX > 74 && hintsX <= 85: // [?] Help
+	case hintsX > 74 && hintsX <= 85:
 		m.Modal = ModalState{Type: ModalHelp}
-	case hintsX > 85: // [q] Quit
-		// При нажатии [q] Выход происходит через сигнализацию чайнику, вернемся в main Update
 	}
 }
 
@@ -259,7 +254,6 @@ func (m *Model) handleModalMouseClick(x, y int) (Model, tea.Cmd) {
 	top := (m.Height - mHeight) / 2
 	left := (m.Width - mWidth) / 2
 
-	// Клик вне рамки модального окна — закрыть модалку
 	if x < left || x >= left+mWidth || y < top || y >= top+mHeight {
 		m.Modal = ModalState{Type: ModalNone}
 		return *m, nil
@@ -270,7 +264,6 @@ func (m *Model) handleModalMouseClick(x, y int) (Model, tea.Cmd) {
 
 	switch m.Modal.Type {
 	case ModalHelp, ModalCapabilities:
-		// Клик внутри справки/способностей — закрыть
 		m.Modal = ModalState{Type: ModalNone}
 
 	case ModalDoctor:
@@ -284,7 +277,6 @@ func (m *Model) handleModalMouseClick(x, y int) (Model, tea.Cmd) {
 
 	case ModalExport:
 		if yRel >= mHeight-3 {
-			// [w] WireGuard | [a] Amnezia | [s] Sing-box | [u] URI | [q] QR-код | [Esc] Закрыть
 			if xRel >= 0 && xRel < 15 {
 				m.handleExportFormat("w")
 			} else if xRel >= 15 && xRel < 28 {
@@ -313,19 +305,16 @@ func (m *Model) handleModalMouseClick(x, y int) (Model, tea.Cmd) {
 		}
 
 	default:
-		// Поля ввода модальных форм
 		if len(m.Modal.Fields) > 0 {
 			fieldIdx := yRel - 2
 			if fieldIdx >= 0 && fieldIdx < len(m.Modal.Fields) {
 				m.Modal.ActiveField = fieldIdx
 				f := &m.Modal.Fields[fieldIdx]
 				if len(f.Options) > 0 {
-					// Клик по переключателю вариантов
 					f.OptionIdx = (f.OptionIdx + 1) % len(f.Options)
 					f.Value = f.Options[f.OptionIdx]
 				}
 			} else if yRel >= 2+len(m.Modal.Fields) {
-				// Клик на нижней панели Подтвердить/Отмена
 				if xRel < 40 {
 					m.submitCurrentModal()
 				} else {
