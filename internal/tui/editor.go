@@ -14,7 +14,7 @@ type RouteEditor struct {
 }
 
 // RenderEditorPane отображает интерактивный редактор выбранного маршрута.
-func RenderEditorPane(m *config.Mesh, ed *RouteEditor, hoverHopIdx, hoverBtn int, isActive bool, width int) string {
+func RenderEditorPane(m *config.Mesh, ed *RouteEditor, hoverHopIdx, hoverBtn int, isPressed bool, isActive bool, width int) string {
 	style := paneStyle.Width(width)
 	if isActive {
 		style = activePaneStyle.Width(width)
@@ -39,7 +39,11 @@ func RenderEditorPane(m *config.Mesh, ed *RouteEditor, hoverHopIdx, hoverBtn int
 			st = selectedBoxStyle
 		}
 		if i == hoverHopIdx {
-			st = st.Copy().Underline(true)
+			if isPressed {
+				st = st.Copy().Foreground(lipgloss.Color("214")).Bold(true).Underline(true)
+			} else {
+				st = st.Copy().Underline(true)
+			}
 		}
 
 		if i == ed.SelectedHop {
@@ -68,13 +72,25 @@ func RenderEditorPane(m *config.Mesh, ed *RouteEditor, hoverHopIdx, hoverBtn int
 	st2 := lipgloss.NewStyle().Foreground(lipgloss.Color("243"))
 
 	if hoverBtn == 0 {
-		st0 = st0.Underline(true)
+		if isPressed {
+			st0 = st0.Foreground(lipgloss.Color("214")).Bold(true).Underline(true)
+		} else {
+			st0 = st0.Underline(true)
+		}
 	}
 	if hoverBtn == 1 {
-		st1 = st1.Underline(true)
+		if isPressed {
+			st1 = st1.Foreground(lipgloss.Color("214")).Bold(true).Underline(true)
+		} else {
+			st1 = st1.Underline(true)
+		}
 	}
 	if hoverBtn == 2 {
-		st2 = st2.Underline(true)
+		if isPressed {
+			st2 = st2.Foreground(lipgloss.Color("214")).Bold(true).Underline(true)
+		} else {
+			st2 = st2.Underline(true)
+		}
 	}
 
 	hints := fmt.Sprintf("%s | %s | %s", st0.Render(btn0), st1.Render(btn1), st2.Render(btn2))

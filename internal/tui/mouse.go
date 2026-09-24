@@ -21,10 +21,22 @@ func (m *Model) handleMouseMsg(msg tea.MouseMsg) (Model, tea.Cmd) {
 		return *m, nil
 	}
 
-	// ВАЖНО: Выполнение действий происходит ИСКЛЮЧИТЕЛЬНО при отпускании кнопки мыши (Release)!
-	// Это предотвращает дублирование и "безумие" при зажатии или движении мыши.
+	// Разделение состояний взаимодействия мыши:
+	// - Hover (движение): элементы подчёркиваются
+	// - Press (зажатие): элементы выделяются подсветкой (isPressed = true)
+	// - Release (отпускание): выполняется действие
+	isPress := (msg.Type == tea.MouseLeft || msg.Action == tea.MouseActionPress) && msg.Type != tea.MouseRelease && msg.Action != tea.MouseActionRelease
 	isRelease := (msg.Type == tea.MouseRelease || msg.Action == tea.MouseActionRelease)
-	if !isRelease {
+
+	if isPress {
+		m.IsMousePressed = true
+		return *m, nil
+	}
+
+	if isRelease {
+		m.IsMousePressed = false
+	} else {
+		m.IsMousePressed = false
 		return *m, nil
 	}
 
@@ -57,11 +69,11 @@ func (m *Model) handleMouseMsg(msg tea.MouseMsg) (Model, tea.Cmd) {
 	topHeight := lipgloss.Height(topBox)
 
 	paneHeight := 6
-	nodesView := RenderNodesPane(m.Mesh, m.SelectedNode, -1, m.ActivePane == PaneNodes, colWidth, paneHeight)
-	routesView := RenderRoutesPane(m.Mesh, m.SelectedRoute, -1, m.ActivePane == PaneRoutes, colWidth, paneHeight)
-	clientsView := RenderClientsPane(m.Mesh, m.SelectedClient, -1, m.ActivePane == PaneClients, colWidth, paneHeight)
-	listsView := RenderListsPane(m.Mesh, m.SelectedList, -1, m.ActivePane == PaneLists, colWidth, paneHeight)
-	editorView := RenderEditorPane(m.Mesh, &m.Editor, -1, -1, m.ActivePane == PaneEditor, totalWidth)
+	nodesView := RenderNodesPane(m.Mesh, m.SelectedNode, -1, false, m.ActivePane == PaneNodes, colWidth, paneHeight)
+	routesView := RenderRoutesPane(m.Mesh, m.SelectedRoute, -1, false, m.ActivePane == PaneRoutes, colWidth, paneHeight)
+	clientsView := RenderClientsPane(m.Mesh, m.SelectedClient, -1, false, m.ActivePane == PaneClients, colWidth, paneHeight)
+	listsView := RenderListsPane(m.Mesh, m.SelectedList, -1, false, m.ActivePane == PaneLists, colWidth, paneHeight)
+	editorView := RenderEditorPane(m.Mesh, &m.Editor, -1, -1, false, m.ActivePane == PaneEditor, totalWidth)
 
 	middleUpper := lipgloss.JoinHorizontal(lipgloss.Top, nodesView, " ", routesView)
 	middleLower := lipgloss.JoinHorizontal(lipgloss.Top, clientsView, " ", listsView)

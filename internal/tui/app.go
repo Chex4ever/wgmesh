@@ -106,8 +106,9 @@ type Model struct {
 	Width  int
 	Height int
 
-	HoverX int
-	HoverY int
+	HoverX         int
+	HoverY         int
+	IsMousePressed bool
 
 	LogMsg   string
 	Applying bool
@@ -1380,11 +1381,11 @@ func (m Model) View() string {
 	)
 
 	paneHeight := 6
-	testNodesView := RenderNodesPane(m.Mesh, m.SelectedNode, -1, m.ActivePane == PaneNodes, colWidth, paneHeight)
-	testRoutesView := RenderRoutesPane(m.Mesh, m.SelectedRoute, -1, m.ActivePane == PaneRoutes, colWidth, paneHeight)
-	testClientsView := RenderClientsPane(m.Mesh, m.SelectedClient, -1, m.ActivePane == PaneClients, colWidth, paneHeight)
-	testListsView := RenderListsPane(m.Mesh, m.SelectedList, -1, m.ActivePane == PaneLists, colWidth, paneHeight)
-	testEditorView := RenderEditorPane(m.Mesh, &m.Editor, -1, -1, m.ActivePane == PaneEditor, totalWidth)
+	testNodesView := RenderNodesPane(m.Mesh, m.SelectedNode, -1, false, m.ActivePane == PaneNodes, colWidth, paneHeight)
+	testRoutesView := RenderRoutesPane(m.Mesh, m.SelectedRoute, -1, false, m.ActivePane == PaneRoutes, colWidth, paneHeight)
+	testClientsView := RenderClientsPane(m.Mesh, m.SelectedClient, -1, false, m.ActivePane == PaneClients, colWidth, paneHeight)
+	testListsView := RenderListsPane(m.Mesh, m.SelectedList, -1, false, m.ActivePane == PaneLists, colWidth, paneHeight)
+	testEditorView := RenderEditorPane(m.Mesh, &m.Editor, -1, -1, false, m.ActivePane == PaneEditor, totalWidth)
 
 	midUpperTest := lipgloss.JoinHorizontal(lipgloss.Top, testNodesView, " ", testRoutesView)
 	midLowerTest := lipgloss.JoinHorizontal(lipgloss.Top, testClientsView, " ", testListsView)
@@ -1471,11 +1472,11 @@ func (m Model) View() string {
 		}
 	}
 
-	nodesView := RenderNodesPane(m.Mesh, m.SelectedNode, hoverNodesIdx, m.ActivePane == PaneNodes, colWidth, paneHeight)
-	routesView := RenderRoutesPane(m.Mesh, m.SelectedRoute, hoverRoutesIdx, m.ActivePane == PaneRoutes, colWidth, paneHeight)
-	clientsView := RenderClientsPane(m.Mesh, m.SelectedClient, hoverClientsIdx, m.ActivePane == PaneClients, colWidth, paneHeight)
-	listsView := RenderListsPane(m.Mesh, m.SelectedList, hoverListsIdx, m.ActivePane == PaneLists, colWidth, paneHeight)
-	editorView := RenderEditorPane(m.Mesh, &m.Editor, hoverHopIdx, hoverBtnIdx, m.ActivePane == PaneEditor, totalWidth)
+	nodesView := RenderNodesPane(m.Mesh, m.SelectedNode, hoverNodesIdx, m.IsMousePressed, m.ActivePane == PaneNodes, colWidth, paneHeight)
+	routesView := RenderRoutesPane(m.Mesh, m.SelectedRoute, hoverRoutesIdx, m.IsMousePressed, m.ActivePane == PaneRoutes, colWidth, paneHeight)
+	clientsView := RenderClientsPane(m.Mesh, m.SelectedClient, hoverClientsIdx, m.IsMousePressed, m.ActivePane == PaneClients, colWidth, paneHeight)
+	listsView := RenderListsPane(m.Mesh, m.SelectedList, hoverListsIdx, m.IsMousePressed, m.ActivePane == PaneLists, colWidth, paneHeight)
+	editorView := RenderEditorPane(m.Mesh, &m.Editor, hoverHopIdx, hoverBtnIdx, m.IsMousePressed, m.ActivePane == PaneEditor, totalWidth)
 
 	middleUpper := lipgloss.JoinHorizontal(
 		lipgloss.Top,
@@ -1498,7 +1499,7 @@ func (m Model) View() string {
 			Render(fmt.Sprintf(" Лог: %s", m.LogMsg)) + "\n"
 	}
 
-	statusBar := RenderStatusBar(m.Mesh, m.ConfigPath, m.IsDirty, "", hoverHintIdx, m.Width)
+	statusBar := RenderStatusBar(m.Mesh, m.ConfigPath, m.IsDirty, "", hoverHintIdx, m.IsMousePressed, m.Width)
 
 	return lipgloss.JoinVertical(
 		lipgloss.Left,

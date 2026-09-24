@@ -9,7 +9,7 @@ import (
 )
 
 // RenderListsPane отображает список доменов/IP для селективного туннелирования и кнопку добавления.
-func RenderListsPane(m *config.Mesh, selectedIdx, hoverIdx int, isActive bool, width, height int) string {
+func RenderListsPane(m *config.Mesh, selectedIdx, hoverIdx int, isPressed bool, isActive bool, width, height int) string {
 	var sb strings.Builder
 	sb.WriteString("Списки доменов/IP (Split Tunneling):\n\n")
 
@@ -26,7 +26,11 @@ func RenderListsPane(m *config.Mesh, selectedIdx, hoverIdx int, isActive bool, w
 			prefix = "► "
 		}
 		if i == hoverIdx {
-			st = st.Copy().Underline(true)
+			if isPressed {
+				st = itemPressedStyle
+			} else {
+				st = st.Copy().Underline(true)
+			}
 		}
 		sb.WriteString(st.Render(fmt.Sprintf("%s%s", prefix, line)) + "\n")
 	}
@@ -40,7 +44,11 @@ func RenderListsPane(m *config.Mesh, selectedIdx, hoverIdx int, isActive bool, w
 		addPrefix = "► "
 	}
 	if hoverIdx == addBtnIdx {
-		addSt = addSt.Copy().Underline(true)
+		if isPressed {
+			addSt = itemPressedStyle
+		} else {
+			addSt = addSt.Copy().Underline(true)
+		}
 	}
 	sb.WriteString(addSt.Render(fmt.Sprintf("%s%s", addPrefix, addBtnText)) + "\n")
 

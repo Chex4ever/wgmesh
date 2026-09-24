@@ -154,3 +154,51 @@ func TestSmartDefaultNames(t *testing.T) {
 		t.Errorf("Expected list_01, got %s", name)
 	}
 }
+
+func TestMouseHoverPressReleaseStates(t *testing.T) {
+	mesh := &config.Mesh{
+		Name: "TestMesh",
+		Nodes: []config.Node{
+			{Name: "node1", Host: "1.1.1.1"},
+		},
+	}
+	model := NewModel(mesh, "mesh.yaml")
+
+	// 1. Mouse Motion (Hover)
+	motionMsg := tea.MouseMsg{
+		X:      10,
+		Y:      5,
+		Action: tea.MouseActionMotion,
+	}
+	newModel, _ := model.Update(motionMsg)
+	m := newModel.(Model)
+	if m.IsMousePressed {
+		t.Errorf("Expected IsMousePressed=false on Hover")
+	}
+
+	// 2. Mouse Press (Down)
+	pressMsg := tea.MouseMsg{
+		X:      10,
+		Y:      5,
+		Type:   tea.MouseLeft,
+		Action: tea.MouseActionPress,
+	}
+	newModel, _ = m.Update(pressMsg)
+	m = newModel.(Model)
+	if !m.IsMousePressed {
+		t.Errorf("Expected IsMousePressed=true on Press")
+	}
+
+	// 3. Mouse Release (Up)
+	releaseMsg := tea.MouseMsg{
+		X:      10,
+		Y:      5,
+		Type:   tea.MouseRelease,
+		Action: tea.MouseActionRelease,
+	}
+	newModel, _ = m.Update(releaseMsg)
+	m = newModel.(Model)
+	if m.IsMousePressed {
+		t.Errorf("Expected IsMousePressed=false on Release")
+	}
+}
