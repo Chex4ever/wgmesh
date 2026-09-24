@@ -280,7 +280,7 @@ func (m *Model) handleModalMouseClick(x, y int) (Model, tea.Cmd) {
 	left := (m.Width - mWidth) / 2
 
 	if x < left || x >= left+mWidth || y < top || y >= top+mHeight {
-		m.Modal = ModalState{Type: ModalNone}
+		// Клик мимо рамок модального окна больше не закрывает окно без сохранения!
 		return *m, nil
 	}
 

@@ -712,9 +712,9 @@ func (m *Model) submitCurrentModal() {
 	}
 }
 
-func (m *Model) getFieldValue(label string) string {
+func (m *Model) getFieldValue(prefix string) string {
 	for _, f := range m.Modal.Fields {
-		if f.Label == label {
+		if strings.HasPrefix(f.Label, prefix) {
 			if len(f.Options) > 0 && f.OptionIdx >= 0 && f.OptionIdx < len(f.Options) {
 				return f.Options[f.OptionIdx]
 			}
@@ -722,6 +722,46 @@ func (m *Model) getFieldValue(label string) string {
 		}
 	}
 	return ""
+}
+
+func (m *Model) nextDefaultNodeName() string {
+	for i := 1; i <= 99; i++ {
+		name := fmt.Sprintf("node_%02d", i)
+		if !m.isNodeNameTaken(name, -1) {
+			return name
+		}
+	}
+	return "node_99"
+}
+
+func (m *Model) nextDefaultRouteName() string {
+	for i := 1; i <= 99; i++ {
+		name := fmt.Sprintf("route_%02d", i)
+		if !m.isRouteNameTaken(name, -1) {
+			return name
+		}
+	}
+	return "route_99"
+}
+
+func (m *Model) nextDefaultClientName() string {
+	for i := 1; i <= 99; i++ {
+		name := fmt.Sprintf("client_%02d", i)
+		if !m.isClientNameTaken(name, -1) {
+			return name
+		}
+	}
+	return "client_99"
+}
+
+func (m *Model) nextDefaultListName() string {
+	for i := 1; i <= 99; i++ {
+		name := fmt.Sprintf("list_%02d", i)
+		if !m.isListNameTaken(name, -1) {
+			return name
+		}
+	}
+	return "list_99"
 }
 
 func (m *Model) nodeNamesList() []string {
@@ -739,12 +779,12 @@ func (m *Model) openBootstrapModal() {
 	m.Modal = ModalState{
 		Type: ModalBootstrapNode,
 		Fields: []FormField{
-			{Label: "Имя ноды", Placeholder: "kz-server"},
+			{Label: "Имя ноды", Value: m.nextDefaultNodeName()},
 			{Label: "IP / Хост ноды", Placeholder: "109.248.198.55"},
-			{Label: "Пароль SSH (для автозагрузки ключа)", Mask: true},
+			{Label: "Пароль SSH *", Mask: true},
 			{Label: "Тип платформы", Options: []string{"linux", "mikrotik", "openwrt"}, OptionIdx: 0, Value: "linux"},
 			{Label: "SSH Пользователь", Value: "root"},
-			{Label: "Защита от удаления", Options: []string{"нет", "да (protected: true)"}, OptionIdx: 0, Value: "нет"},
+			{Label: "Защита от удаления **", Options: []string{"нет", "да (protected: true)"}, OptionIdx: 0, Value: "нет"},
 		},
 	}
 }
@@ -753,12 +793,12 @@ func (m *Model) openAddNodeModal() {
 	m.Modal = ModalState{
 		Type: ModalAddNode,
 		Fields: []FormField{
-			{Label: "Имя ноды", Placeholder: "de-server"},
+			{Label: "Имя ноды", Value: m.nextDefaultNodeName()},
 			{Label: "IP / Хост ноды", Placeholder: "194.87.71.7"},
-			{Label: "Пароль SSH (для автозагрузки ключа)", Mask: true},
+			{Label: "Пароль SSH *", Mask: true},
 			{Label: "Тип платформы", Options: []string{"linux", "mikrotik", "openwrt"}, OptionIdx: 0, Value: "linux"},
 			{Label: "SSH Пользователь", Value: "root"},
-			{Label: "Защита от удаления", Options: []string{"нет", "да (protected: true)"}, OptionIdx: 0, Value: "нет"},
+			{Label: "Защита от удаления **", Options: []string{"нет", "да (protected: true)"}, OptionIdx: 0, Value: "нет"},
 		},
 	}
 }
@@ -773,10 +813,10 @@ func (m *Model) openAddRouteModal() {
 	m.Modal = ModalState{
 		Type: ModalAddRoute,
 		Fields: []FormField{
-			{Label: "Имя маршрута", Placeholder: "via-kz-de"},
+			{Label: "Имя маршрута", Value: m.nextDefaultRouteName()},
 			{Label: "Путь (через запятую)", Value: defaultPath},
 			{Label: "Выходной сервер (Exit)", Options: nodeNames, OptionIdx: 0, Value: nodeNames[0]},
-			{Label: "Защита маршрута", Options: []string{"нет", "да (protected: true)"}, OptionIdx: 0, Value: "нет"},
+			{Label: "Защита маршрута **", Options: []string{"нет", "да (protected: true)"}, OptionIdx: 0, Value: "нет"},
 		},
 	}
 }
@@ -786,7 +826,7 @@ func (m *Model) openAddClientModal() {
 	m.Modal = ModalState{
 		Type: ModalAddClient,
 		Fields: []FormField{
-			{Label: "Имя клиента (устройства)", Placeholder: "alice-phone"},
+			{Label: "Имя клиента (устройства)", Value: m.nextDefaultClientName()},
 			{Label: "Нода подключения (Ingress)", Options: nodeNames, OptionIdx: 0, Value: nodeNames[0]},
 		},
 	}
@@ -796,7 +836,7 @@ func (m *Model) openAddListModal() {
 	m.Modal = ModalState{
 		Type: ModalAddList,
 		Fields: []FormField{
-			{Label: "Имя списка", Placeholder: "youtube-list"},
+			{Label: "Имя списка", Value: m.nextDefaultListName()},
 			{Label: "Домены (через запятую)", Placeholder: "youtube.com, *.googlevideo.com"},
 		},
 	}
@@ -883,10 +923,10 @@ func (m *Model) openEditNodeModal() {
 		Fields: []FormField{
 			{Label: "Имя ноды", Value: node.Name},
 			{Label: "IP / Хост ноды", Value: node.Host},
-			{Label: "Пароль SSH (для автозагрузки ключа)", Mask: true},
+			{Label: "Пароль SSH *", Mask: true},
 			{Label: "Тип платформы", Options: []string{"linux", "mikrotik", "openwrt"}, OptionIdx: typeOpt, Value: node.Type},
 			{Label: "SSH Пользователь", Value: node.SSHUser},
-			{Label: "Защита от удаления", Options: []string{"нет", "да (protected: true)"}, OptionIdx: protOpt, Value: []string{"нет", "да (protected: true)"}[protOpt]},
+			{Label: "Защита от удаления **", Options: []string{"нет", "да (protected: true)"}, OptionIdx: protOpt, Value: []string{"нет", "да (protected: true)"}[protOpt]},
 		},
 	}
 }
@@ -968,7 +1008,7 @@ func (m *Model) showEditRouteForm() {
 			{Label: "Имя маршрута", Value: r.Name},
 			{Label: "Путь (через запятую)", Value: strings.Join(r.Path, ", ")},
 			{Label: "Выходной сервер (Exit)", Options: nodeNames, OptionIdx: exitOpt, Value: nodeNames[exitOpt]},
-			{Label: "Защита маршрута", Options: []string{"нет", "да (protected: true)"}, OptionIdx: protOpt, Value: []string{"нет", "да (protected: true)"}[protOpt]},
+			{Label: "Защита маршрута **", Options: []string{"нет", "да (protected: true)"}, OptionIdx: protOpt, Value: []string{"нет", "да (protected: true)"}[protOpt]},
 		},
 	}
 }

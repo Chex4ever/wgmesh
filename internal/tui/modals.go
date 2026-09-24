@@ -84,7 +84,16 @@ func renderFormModal(title string, state ModalState) string {
 	var sb strings.Builder
 	sb.WriteString(titleStyle.Render(title) + "\n\n")
 
+	hasStar := false
+	hasStarStar := false
+
 	for i, f := range state.Fields {
+		if strings.Contains(f.Label, "**") {
+			hasStarStar = true
+		} else if strings.Contains(f.Label, "*") {
+			hasStar = true
+		}
+
 		val := f.Value
 		if len(f.Options) > 0 {
 			if f.OptionIdx >= 0 && f.OptionIdx < len(f.Options) {
@@ -98,20 +107,28 @@ func renderFormModal(title string, state ModalState) string {
 
 		if i == state.ActiveField {
 			if len(f.Options) > 0 {
-				sb.WriteString(activeFieldStyle.Render(fmt.Sprintf("► %-24s: %s", f.Label, val)) + "\n")
+				sb.WriteString(activeFieldStyle.Render(fmt.Sprintf("► %-26s: %s", f.Label, val)) + "\n")
 			} else {
-				sb.WriteString(activeFieldStyle.Render(fmt.Sprintf("► %-24s: [%s_]", f.Label, val)) + "\n")
+				sb.WriteString(activeFieldStyle.Render(fmt.Sprintf("► %-26s: [%s_]", f.Label, val)) + "\n")
 			}
 		} else {
 			if len(f.Options) > 0 && f.OptionIdx >= 0 && f.OptionIdx < len(f.Options) {
 				val = f.Options[f.OptionIdx]
 			}
-			sb.WriteString(fieldLabelStyle.Render(fmt.Sprintf("  %-24s: %s", f.Label, val)) + "\n")
+			sb.WriteString(fieldLabelStyle.Render(fmt.Sprintf("  %-26s: %s", f.Label, val)) + "\n")
 		}
 	}
 
-	sb.WriteString("\n" + lipgloss.NewStyle().Foreground(lipgloss.Color("243")).Render(
-		"[Tab/↓] Следующее поле | [←/→] Выбор варианта | [Enter] Подтвердить | [Esc] Отмена",
+	noteStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("242"))
+	if hasStar {
+		sb.WriteString("\n" + noteStyle.Render("* Пароль SSH используется только для автозагрузки ключа и нигде не сохраняется"))
+	}
+	if hasStarStar {
+		sb.WriteString("\n" + noteStyle.Render("** При включении защиты перед удалением или редактированием потребуется подтверждение"))
+	}
+
+	sb.WriteString("\n\n" + lipgloss.NewStyle().Foreground(lipgloss.Color("243")).Render(
+		"[Tab/Enter/↓] Навигация | [←/→] Варианты | [Enter на посл. поле] Сохранить | [Esc] Отмена",
 	))
 
 	return sb.String()

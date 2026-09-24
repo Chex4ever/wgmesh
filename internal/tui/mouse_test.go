@@ -129,3 +129,28 @@ func TestDuplicateNameValidation(t *testing.T) {
 		t.Errorf("Expected node3 to NOT be taken")
 	}
 }
+
+func TestSmartDefaultNames(t *testing.T) {
+	mesh := &config.Mesh{
+		Nodes: []config.Node{
+			{Name: "node_01"},
+		},
+		Routes: []config.Route{
+			{Name: "route_01"},
+		},
+	}
+	model := NewModel(mesh, "mesh.yaml")
+
+	if name := model.nextDefaultNodeName(); name != "node_02" {
+		t.Errorf("Expected node_02, got %s", name)
+	}
+	if name := model.nextDefaultRouteName(); name != "route_02" {
+		t.Errorf("Expected route_02, got %s", name)
+	}
+	if name := model.nextDefaultClientName(); name != "client_01" {
+		t.Errorf("Expected client_01, got %s", name)
+	}
+	if name := model.nextDefaultListName(); name != "list_01" {
+		t.Errorf("Expected list_01, got %s", name)
+	}
+}
