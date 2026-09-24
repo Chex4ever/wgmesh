@@ -22,6 +22,7 @@ func Execute() {
 несколько хопов, один бинарник без центрального сервера.`,
 		SilenceUsage:  true,
 		SilenceErrors: true,
+		RunE:          runTUICmd,
 	}
 	root.PersistentFlags().StringVar(&cfgPath, "config", config.DefaultConfigFile,
 		"путь к главному YAML-конфигу")

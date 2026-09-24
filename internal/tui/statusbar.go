@@ -34,7 +34,7 @@ func RenderStatusBar(m *config.Mesh, configPath string, isDirty bool, activePane
 	leftInfo := fmt.Sprintf("Ноды: %d | Маршруты: %d | Конфиг: %s%s",
 		nodeCount, routeCount, configPath, dirtyText)
 
-	hints := keyHintStyle.Render("[?] Help | [Tab] Панель | [a] Apply | [s] Save | [q] Quit")
+	hints := keyHintStyle.Render("[Tab] Панель | [b] Bootstrap | [a] Apply | [d] Doctor | [x] Export | [g] Git | [?] Help")
 
 	totalWidth := width - 4
 	if totalWidth < 40 {

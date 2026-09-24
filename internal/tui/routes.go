@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/meshctl/meshctl/internal/config"
 )
 
@@ -17,7 +18,11 @@ func RenderRoutesPane(m *config.Mesh, selectedIdx int, isActive bool, height int
 	} else {
 		for i, r := range m.Routes {
 			hopsStr := strings.Join(r.Path, " ──▶ ")
-			line := fmt.Sprintf("%-14s [%s] (Exit: %s)", r.Name, hopsStr, r.ExitNode)
+			protBadge := ""
+			if r.Protected {
+				protBadge = lipgloss.NewStyle().Foreground(lipgloss.Color("208")).Render(" [PROTECTED]")
+			}
+			line := fmt.Sprintf("%-14s [%s] (Exit: %s)%s", r.Name, hopsStr, r.ExitNode, protBadge)
 
 			if i == selectedIdx {
 				sb.WriteString(itemSelectedStyle.Render(fmt.Sprintf("► %s", line)))

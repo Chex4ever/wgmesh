@@ -49,7 +49,12 @@ func RenderNodesPane(m *config.Mesh, selectedIdx int, isActive bool, height int)
 				ip = "авто"
 			}
 
-			line := fmt.Sprintf("%s %-14s [%-8s] %s (%s)", icon, n.Name, n.Type, n.Host, ip)
+			protBadge := ""
+			if n.Protected {
+				protBadge = lipgloss.NewStyle().Foreground(lipgloss.Color("208")).Render(" [PROTECTED]")
+			}
+
+			line := fmt.Sprintf("%s %-14s [%-8s] %s (%s)%s", icon, n.Name, n.Type, n.Host, ip, protBadge)
 
 			if i == selectedIdx {
 				sb.WriteString(itemSelectedStyle.Render(fmt.Sprintf("► %s", line)))
