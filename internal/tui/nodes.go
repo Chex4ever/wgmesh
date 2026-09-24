@@ -39,12 +39,12 @@ func RenderNodesPane(m *config.Mesh, selectedIdx, hoverIdx int, isPressed bool, 
 
 	nodeCount := len(m.Nodes)
 	for i, n := range m.Nodes {
-		icon := "●"
+		icon := "*"
 		switch n.Type {
 		case config.TypeMikrotik:
-			icon = "◆"
+			icon = "#"
 		case config.TypeOpenWRT:
-			icon = "▲"
+			icon = "^"
 		}
 
 		ip := n.MeshIP
@@ -63,7 +63,7 @@ func RenderNodesPane(m *config.Mesh, selectedIdx, hoverIdx int, isPressed bool, 
 		prefix := "  "
 		if i == selectedIdx {
 			st = itemSelectedStyle
-			prefix = "► "
+			prefix = "> "
 		}
 		if i == hoverIdx {
 			if isPressed {
@@ -78,12 +78,12 @@ func RenderNodesPane(m *config.Mesh, selectedIdx, hoverIdx int, isPressed bool, 
 	addBtnIdx := nodeCount
 	bootBtnIdx := nodeCount + 1
 
-	addBtnText := "➕ [+ Добавить ноду ('n')]"
+	addBtnText := "[+ Добавить ноду ('n')]"
 	addSt := lipgloss.NewStyle().Foreground(lipgloss.Color("244"))
 	addPrefix := "  "
 	if selectedIdx == addBtnIdx {
 		addSt = itemSelectedStyle
-		addPrefix = "► "
+		addPrefix = "> "
 	}
 	if hoverIdx == addBtnIdx {
 		if isPressed {
@@ -94,12 +94,12 @@ func RenderNodesPane(m *config.Mesh, selectedIdx, hoverIdx int, isPressed bool, 
 	}
 	sb.WriteString(addSt.Render(fmt.Sprintf("%s%s", addPrefix, addBtnText)) + "\n")
 
-	bootBtnText := "🚀 [Bootstrap по SSH ('b')]"
+	bootBtnText := "[SSH Bootstrap ноды ('b')]"
 	bootSt := lipgloss.NewStyle().Foreground(lipgloss.Color("244"))
 	bootPrefix := "  "
 	if selectedIdx == bootBtnIdx {
 		bootSt = itemSelectedStyle
-		bootPrefix = "► "
+		bootPrefix = "> "
 	}
 	if hoverIdx == bootBtnIdx {
 		if isPressed {

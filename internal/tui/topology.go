@@ -37,7 +37,7 @@ func RenderTopology(m *config.Mesh, activeRouteIdx int, width int) string {
 			return lipgloss.NewStyle().
 				Foreground(lipgloss.Color("214")).
 				Render(
-					"💡 Карта топологии пока пуста. Для старта:\n" +
+					"[INFO] Карта топологии пока пуста. Для старта:\n" +
 						"   1. Нажмите [b] для подключения первого сервера/роутера по SSH (Bootstrap)\n" +
 						"   2. Нажмите [r] для создания первого exit-маршрута\n" +
 						"   3. Нажмите [a] для быстрой настройки узлов по SSH (Apply)",
@@ -46,7 +46,7 @@ func RenderTopology(m *config.Mesh, activeRouteIdx int, width int) string {
 		return lipgloss.NewStyle().
 			Foreground(lipgloss.Color("86")).
 			Render(
-				"💡 Узлы добавлены, но маршруты еще не настроены:\n" +
+				"[INFO] Узлы добавлены, но маршруты еще не настроены:\n" +
 					"   1. Нажмите [r] для создания первого маршрута через узел\n" +
 					"   2. Нажмите [a] для применения конфигурации по SSH",
 			)
@@ -57,7 +57,7 @@ func RenderTopology(m *config.Mesh, activeRouteIdx int, width int) string {
 		isSelected := (i == activeRouteIdx)
 		chainStr := renderRouteChain(m, &r, isSelected)
 		if isSelected {
-			sb.WriteString(selectedRouteStyle.Render(fmt.Sprintf("► %s", r.Name)))
+			sb.WriteString(selectedRouteStyle.Render(fmt.Sprintf("> %s", r.Name)))
 		} else {
 			sb.WriteString(normalRouteStyle.Render(fmt.Sprintf("  %s", r.Name)))
 		}
@@ -73,7 +73,7 @@ func RenderTopology(m *config.Mesh, activeRouteIdx int, width int) string {
 
 func renderRouteChain(m *config.Mesh, r *config.Route, isSelected bool) string {
 	var elements []string
-	arrow := arrowStyle.Render(" ──▶ ")
+	arrow := arrowStyle.Render(" ---> ")
 
 	elements = append(elements, renderBox("Client", isSelected))
 
@@ -83,11 +83,11 @@ func renderRouteChain(m *config.Mesh, r *config.Route, isSelected bool) string {
 		if node != nil {
 			switch node.Type {
 			case config.TypeMikrotik:
-				label = fmt.Sprintf("◆ %s", hopName)
+				label = fmt.Sprintf("# %s", hopName)
 			case config.TypeOpenWRT:
-				label = fmt.Sprintf("▲ %s", hopName)
+				label = fmt.Sprintf("^ %s", hopName)
 			default:
-				label = fmt.Sprintf("● %s", hopName)
+				label = fmt.Sprintf("* %s", hopName)
 			}
 		}
 		elements = append(elements, arrow, renderBox(label, isSelected))

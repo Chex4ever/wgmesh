@@ -23,13 +23,13 @@ func RenderClientsPane(m *config.Mesh, selectedIdx, hoverIdx int, isPressed bool
 		if ingress == "" {
 			ingress = "не назначен"
 		}
-		line := fmt.Sprintf("📱 %-10s [%s] -> %s", c.Name, ip, ingress)
+		line := fmt.Sprintf("%-10s [%s] -> %s", c.Name, ip, ingress)
 
 		st := itemNormalStyle
 		prefix := "  "
 		if i == selectedIdx {
 			st = itemSelectedStyle
-			prefix = "► "
+			prefix = "> "
 		}
 		if i == hoverIdx {
 			if isPressed {
@@ -42,12 +42,12 @@ func RenderClientsPane(m *config.Mesh, selectedIdx, hoverIdx int, isPressed bool
 	}
 
 	addBtnIdx := clientCount
-	addBtnText := "📱 [+ Добавить клиента ('c')]"
+	addBtnText := "[+ Добавить клиента ('c')]"
 	addSt := lipgloss.NewStyle().Foreground(lipgloss.Color("244"))
 	addPrefix := "  "
 	if selectedIdx == addBtnIdx {
 		addSt = itemSelectedStyle
-		addPrefix = "► "
+		addPrefix = "> "
 	}
 	if hoverIdx == addBtnIdx {
 		if isPressed {

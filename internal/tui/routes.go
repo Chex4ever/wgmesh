@@ -15,7 +15,7 @@ func RenderRoutesPane(m *config.Mesh, selectedIdx, hoverIdx int, isPressed bool,
 
 	routeCount := len(m.Routes)
 	for i, r := range m.Routes {
-		hopsStr := strings.Join(r.Path, " ──▶ ")
+		hopsStr := strings.Join(r.Path, " ---> ")
 		protBadge := ""
 		if r.Protected {
 			protBadge = lipgloss.NewStyle().Foreground(lipgloss.Color("208")).Render(" [PROT]")
@@ -26,7 +26,7 @@ func RenderRoutesPane(m *config.Mesh, selectedIdx, hoverIdx int, isPressed bool,
 		prefix := "  "
 		if i == selectedIdx {
 			st = itemSelectedStyle
-			prefix = "► "
+			prefix = "> "
 		}
 		if i == hoverIdx {
 			if isPressed {
@@ -39,12 +39,12 @@ func RenderRoutesPane(m *config.Mesh, selectedIdx, hoverIdx int, isPressed bool,
 	}
 
 	addBtnIdx := routeCount
-	addBtnText := "➕ [+ Создать маршрут ('r')]"
+	addBtnText := "[+ Создать маршрут ('r')]"
 	addSt := lipgloss.NewStyle().Foreground(lipgloss.Color("244"))
 	addPrefix := "  "
 	if selectedIdx == addBtnIdx {
 		addSt = itemSelectedStyle
-		addPrefix = "► "
+		addPrefix = "> "
 	}
 	if hoverIdx == addBtnIdx {
 		if isPressed {

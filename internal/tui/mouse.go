@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"fmt"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/meshctl/meshctl/internal/config"
@@ -62,7 +64,7 @@ func (m *Model) handleMouseMsg(msg tea.MouseMsg) (Model, tea.Cmd) {
 	header := lipgloss.NewStyle().
 		Bold(true).
 		Foreground(lipgloss.Color("86")).
-		Render("═══ " + m.Mesh.Name + " (wgmesh TUI) ═══")
+		Render(fmt.Sprintf("=== Топология сети: %s (версия %s) ===", m.Mesh.Name, m.Version))
 
 	topView := RenderTopology(m.Mesh, m.SelectedRoute, totalWidth)
 	topBox := paneStyle.Width(totalWidth).Render(header + "\n\n" + topView)
@@ -248,7 +250,7 @@ func (m *Model) handleStatusBarClick(x int) {
 				m.LogMsg = "Ошибка сохранения: " + err.Error()
 			} else {
 				m.IsDirty = false
-				m.LogMsg = "✔ Конфигурация успешно сохранена в " + m.ConfigPath
+				m.LogMsg = "[OK] Конфигурация успешно сохранена в " + m.ConfigPath
 			}
 		}
 		return
@@ -261,10 +263,10 @@ func (m *Model) handleStatusBarClick(x int) {
 			m.LogMsg = "Ошибка сохранения: " + err.Error()
 		} else {
 			m.IsDirty = false
-			m.LogMsg = "✔ Конфигурация успешно сохранена в " + m.ConfigPath
+			m.LogMsg = "[OK] Конфигурация успешно сохранена в " + m.ConfigPath
 		}
 	case hintsX > 10 && hintsX <= 22:
-		m.LogMsg = "→ Запуск полного применения (Apply) по SSH…"
+		m.LogMsg = "-> Запуск полного применения (Apply) по SSH..."
 		m.runApply()
 	case hintsX > 22 && hintsX <= 38:
 		m.openBootstrapModal()

@@ -17,13 +17,13 @@ func RenderListsPane(m *config.Mesh, selectedIdx, hoverIdx int, isPressed bool, 
 	for i, l := range m.Lists {
 		countD := len(l.Domains)
 		countIP := len(l.IPs)
-		line := fmt.Sprintf("🌐 %-10s (Domains: %d, IPs: %d)", l.Name, countD, countIP)
+		line := fmt.Sprintf("%-10s (Domains: %d, IPs: %d)", l.Name, countD, countIP)
 
 		st := itemNormalStyle
 		prefix := "  "
 		if i == selectedIdx {
 			st = itemSelectedStyle
-			prefix = "► "
+			prefix = "> "
 		}
 		if i == hoverIdx {
 			if isPressed {
@@ -36,12 +36,12 @@ func RenderListsPane(m *config.Mesh, selectedIdx, hoverIdx int, isPressed bool, 
 	}
 
 	addBtnIdx := listCount
-	addBtnText := "🌐 [+ Добавить список ('l')]"
+	addBtnText := "[+ Добавить список ('l')]"
 	addSt := lipgloss.NewStyle().Foreground(lipgloss.Color("244"))
 	addPrefix := "  "
 	if selectedIdx == addBtnIdx {
 		addSt = itemSelectedStyle
-		addPrefix = "► "
+		addPrefix = "> "
 	}
 	if hoverIdx == addBtnIdx {
 		if isPressed {

@@ -30,7 +30,7 @@ func RenderEditorPane(m *config.Mesh, ed *RouteEditor, hoverHopIdx, hoverBtn int
 
 	sb.WriteString("Цепочка хопов:\n")
 	var elements []string
-	arrow := arrowStyle.Render(" ──▶ ")
+	arrow := arrowStyle.Render(" ---> ")
 
 	for i, hop := range r.Path {
 		box := ""

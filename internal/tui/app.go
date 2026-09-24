@@ -183,11 +183,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.LogMsg = fmt.Sprintf("Ошибка сохранения: %v", err)
 			} else {
 				m.IsDirty = false
-				m.LogMsg = fmt.Sprintf("✔ Конфигурация успешно сохранена в %s", m.ConfigPath)
+				m.LogMsg = fmt.Sprintf("[OK] Конфигурация успешно сохранена в %s", m.ConfigPath)
 			}
 
 		case "a":
-			m.LogMsg = "→ Запуск полного применения (Apply) по SSH…"
+			m.LogMsg = "-> Запуск полного применения (Apply) по SSH..."
 			m.runApply()
 
 		case "d":
@@ -314,20 +314,20 @@ func (m *Model) moveSelection(delta int) {
 
 func (m *Model) addHopToSelectedRoute() {
 	if len(m.Mesh.Nodes) == 0 {
-		m.LogMsg = "ℹ️ Для создания маршрута сначала добавьте хотя бы один сервер/роутер (нажмите 'b' для Bootstrap или 'n')"
+		m.LogMsg = "[INFO] Для создания маршрута сначала добавьте хотя бы один сервер/роутер (нажмите 'b' для Bootstrap или 'n')"
 		return
 	}
 	if len(m.Mesh.Routes) > 0 && m.SelectedRoute < len(m.Mesh.Routes) {
 		r := &m.Mesh.Routes[m.SelectedRoute]
 		if r.Protected {
-			m.LogMsg = fmt.Sprintf("⚠️ Маршрут %q защищён (protected: true) — редактирование запрещено", r.Name)
+			m.LogMsg = fmt.Sprintf("[!] Маршрут %q защищён (protected: true) - редактирование запрещено", r.Name)
 			return
 		}
 		nodeToAdd := m.Mesh.Nodes[0].Name
 		r.Path = append(r.Path, nodeToAdd)
 		r.ExitNode = nodeToAdd
 		m.IsDirty = true
-		m.LogMsg = fmt.Sprintf("✔ Добавлен хоп %s в маршрут %s", nodeToAdd, r.Name)
+		m.LogMsg = fmt.Sprintf("[OK] Добавлен хоп %s в маршрут %s", nodeToAdd, r.Name)
 	} else {
 		m.openAddRouteModal()
 	}
@@ -337,7 +337,7 @@ func (m *Model) removeHopFromSelectedRoute() {
 	if len(m.Mesh.Routes) > 0 && m.SelectedRoute < len(m.Mesh.Routes) {
 		r := &m.Mesh.Routes[m.SelectedRoute]
 		if r.Protected {
-			m.LogMsg = fmt.Sprintf("⚠️ Маршрут %q защищён (protected: true) — редактирование запрещено", r.Name)
+			m.LogMsg = fmt.Sprintf("[!] Маршрут %q защищён (protected: true) - редактирование запрещено", r.Name)
 			return
 		}
 		if len(r.Path) > 2 {
@@ -345,7 +345,7 @@ func (m *Model) removeHopFromSelectedRoute() {
 			r.Path = r.Path[:len(r.Path)-1]
 			r.ExitNode = r.Path[len(r.Path)-1]
 			m.IsDirty = true
-			m.LogMsg = fmt.Sprintf("✔ Удалён хоп %s из маршрута %s", removed, r.Name)
+			m.LogMsg = fmt.Sprintf("[OK] Удалён хоп %s из маршрута %s", removed, r.Name)
 		}
 	}
 }
@@ -439,11 +439,11 @@ func (m *Model) submitCurrentModal() {
 		protStr := strings.ToLower(m.getFieldValue("Защита от удаления"))
 
 		if name == "" || host == "" {
-			m.LogMsg = "⚠️ Ошибка: укажите имя и IP ноды"
+			m.LogMsg = "[!] Ошибка: укажите имя и IP ноды"
 			return
 		}
 		if m.isNodeNameTaken(name, -1) {
-			m.LogMsg = fmt.Sprintf("⚠️ Ошибка: Имя ноды %q уже занято! Укажите уникальное имя.", name)
+			m.LogMsg = fmt.Sprintf("[!] Ошибка: Имя ноды %q уже занято! Укажите уникальное имя.", name)
 			return
 		}
 		if user == "" {
@@ -462,7 +462,7 @@ func (m *Model) submitCurrentModal() {
 			}
 			keyPath = kp
 			if pass != "" {
-				m.LogMsg = fmt.Sprintf("→ Провижининг SSH-ключа на %s@%s…", user, host)
+				m.LogMsg = fmt.Sprintf("-> Провижининг SSH-ключа на %s@%s...", user, host)
 				if err := installRemoteKeyTUI(host, 22, user, pass, keyPath, pubStr, nType); err != nil {
 					m.LogMsg = fmt.Sprintf("Ошибка установки SSH-ключа на удаленный хост: %v", err)
 					return
@@ -483,7 +483,7 @@ func (m *Model) submitCurrentModal() {
 		})
 		m.IsDirty = true
 		_ = config.Save(m.ConfigPath, m.Mesh)
-		m.LogMsg = fmt.Sprintf("✔ Нода %q (%s) успешно добавлена!", name, host)
+		m.LogMsg = fmt.Sprintf("[OK] Нода %q (%s) успешно добавлена!", name, host)
 		m.Modal = ModalState{Type: ModalNone}
 
 	case ModalEditNode:
@@ -502,11 +502,11 @@ func (m *Model) submitCurrentModal() {
 		protStr := strings.ToLower(m.getFieldValue("Защита от удаления"))
 
 		if newName == "" || host == "" {
-			m.LogMsg = "⚠️ Ошибка: имя и IP ноды не могут быть пустыми!"
+			m.LogMsg = "[!] Ошибка: имя и IP ноды не могут быть пустыми!"
 			return
 		}
 		if m.isNodeNameTaken(newName, m.SelectedNode) {
-			m.LogMsg = fmt.Sprintf("⚠️ Ошибка: Имя ноды %q уже занято!", newName)
+			m.LogMsg = fmt.Sprintf("[!] Ошибка: Имя ноды %q уже занято!", newName)
 			return
 		}
 		if user == "" {
@@ -519,9 +519,9 @@ func (m *Model) submitCurrentModal() {
 		if pass != "" {
 			kp, pubStr, err := ensureDefaultSSHKeyTUI()
 			if err == nil {
-				m.LogMsg = fmt.Sprintf("→ Провижининг SSH-ключа на %s@%s…", user, host)
+				m.LogMsg = fmt.Sprintf("-> Провижининг SSH-ключа на %s@%s...", user, host)
 				if err := installRemoteKeyTUI(host, 22, user, pass, kp, pubStr, nType); err != nil {
-					m.LogMsg = fmt.Sprintf("⚠️ Ошибка установки SSH-ключа: %v", err)
+					m.LogMsg = fmt.Sprintf("[!] Ошибка установки SSH-ключа: %v", err)
 					return
 				}
 			}
@@ -543,9 +543,9 @@ func (m *Model) submitCurrentModal() {
 		_ = config.Save(m.ConfigPath, m.Mesh)
 
 		if newName != oldName {
-			m.LogMsg = fmt.Sprintf("✔ Нода переименована: %q ➔ %q (обновлена во всех маршрутах и клиентах)!", oldName, newName)
+			m.LogMsg = fmt.Sprintf("[OK] Нода переименована: %q -> %q (обновлена во всех маршрутах и клиентах)!", oldName, newName)
 		} else {
-			m.LogMsg = fmt.Sprintf("✔ Настройки ноды %q сохранены!", newName)
+			m.LogMsg = fmt.Sprintf("[OK] Настройки ноды %q сохранены!", newName)
 		}
 		m.Modal = ModalState{Type: ModalNone}
 
@@ -556,7 +556,7 @@ func (m *Model) submitCurrentModal() {
 		protStr := strings.ToLower(m.getFieldValue("Защита маршрута"))
 		if name != "" && pathStr != "" {
 			if m.isRouteNameTaken(name, -1) {
-				m.LogMsg = fmt.Sprintf("⚠️ Ошибка: Имя маршрута %q уже занято!", name)
+				m.LogMsg = fmt.Sprintf("[!] Ошибка: Имя маршрута %q уже занято!", name)
 				return
 			}
 			hops := splitTrimTUI(pathStr)
@@ -575,7 +575,7 @@ func (m *Model) submitCurrentModal() {
 			m.Mesh.Routes = append(m.Mesh.Routes, r)
 			m.IsDirty = true
 			_ = config.Save(m.ConfigPath, m.Mesh)
-			m.LogMsg = fmt.Sprintf("✔ Маршрут %q создан", name)
+			m.LogMsg = fmt.Sprintf("[OK] Маршрут %q создан", name)
 		}
 		m.Modal = ModalState{Type: ModalNone}
 
@@ -591,11 +591,11 @@ func (m *Model) submitCurrentModal() {
 		protStr := strings.ToLower(m.getFieldValue("Защита маршрута"))
 
 		if newName == "" || pathStr == "" {
-			m.LogMsg = "⚠️ Ошибка: имя и путь маршрута не могут быть пустыми!"
+			m.LogMsg = "[!] Ошибка: имя и путь маршрута не могут быть пустыми!"
 			return
 		}
 		if m.isRouteNameTaken(newName, m.SelectedRoute) {
-			m.LogMsg = fmt.Sprintf("⚠️ Ошибка: Имя маршрута %q уже занято!", newName)
+			m.LogMsg = fmt.Sprintf("[!] Ошибка: Имя маршрута %q уже занято!", newName)
 			return
 		}
 
@@ -614,7 +614,7 @@ func (m *Model) submitCurrentModal() {
 
 		m.IsDirty = true
 		_ = config.Save(m.ConfigPath, m.Mesh)
-		m.LogMsg = fmt.Sprintf("✔ Настройки маршрута %q сохранены!", newName)
+		m.LogMsg = fmt.Sprintf("[OK] Настройки маршрута %q сохранены!", newName)
 		m.Modal = ModalState{Type: ModalNone}
 
 	case ModalAddClient:
@@ -622,7 +622,7 @@ func (m *Model) submitCurrentModal() {
 		ingress := m.getFieldValue("Нода подключения (Ingress)")
 		if name != "" {
 			if m.isClientNameTaken(name, -1) {
-				m.LogMsg = fmt.Sprintf("⚠️ Ошибка: Имя клиента %q уже занято!", name)
+				m.LogMsg = fmt.Sprintf("[!] Ошибка: Имя клиента %q уже занято!", name)
 				return
 			}
 			if strings.HasPrefix(ingress, "(") {
@@ -635,7 +635,7 @@ func (m *Model) submitCurrentModal() {
 			m.Mesh.Clients = append(m.Mesh.Clients, c)
 			m.IsDirty = true
 			_ = config.Save(m.ConfigPath, m.Mesh)
-			m.LogMsg = fmt.Sprintf("✔ Клиент %q добавлен", name)
+			m.LogMsg = fmt.Sprintf("[OK] Клиент %q добавлен", name)
 		}
 		m.Modal = ModalState{Type: ModalNone}
 
@@ -649,11 +649,11 @@ func (m *Model) submitCurrentModal() {
 		ingress := m.getFieldValue("Нода подключения (Ingress)")
 
 		if newName == "" {
-			m.LogMsg = "⚠️ Ошибка: имя клиента не может быть пустым!"
+			m.LogMsg = "[!] Ошибка: имя клиента не может быть пустым!"
 			return
 		}
 		if m.isClientNameTaken(newName, m.SelectedClient) {
-			m.LogMsg = fmt.Sprintf("⚠️ Ошибка: Имя клиента %q уже занято!", newName)
+			m.LogMsg = fmt.Sprintf("[!] Ошибка: Имя клиента %q уже занято!", newName)
 			return
 		}
 		if strings.HasPrefix(ingress, "(") {
@@ -664,7 +664,7 @@ func (m *Model) submitCurrentModal() {
 		oldClient.Ingress = ingress
 		m.IsDirty = true
 		_ = config.Save(m.ConfigPath, m.Mesh)
-		m.LogMsg = fmt.Sprintf("✔ Настройки клиента %q сохранены!", newName)
+		m.LogMsg = fmt.Sprintf("[OK] Настройки клиента %q сохранены!", newName)
 		m.Modal = ModalState{Type: ModalNone}
 
 	case ModalAddList:
@@ -672,7 +672,7 @@ func (m *Model) submitCurrentModal() {
 		domStr := m.getFieldValue("Домены (через запятую)")
 		if name != "" {
 			if m.isListNameTaken(name, -1) {
-				m.LogMsg = fmt.Sprintf("⚠️ Ошибка: Имя списка %q уже занято!", name)
+				m.LogMsg = fmt.Sprintf("[!] Ошибка: Имя списка %q уже занято!", name)
 				return
 			}
 			doms := splitTrimTUI(domStr)
@@ -683,7 +683,7 @@ func (m *Model) submitCurrentModal() {
 			m.Mesh.Lists = append(m.Mesh.Lists, l)
 			m.IsDirty = true
 			_ = config.Save(m.ConfigPath, m.Mesh)
-			m.LogMsg = fmt.Sprintf("✔ Список доменов %q добавлен", name)
+			m.LogMsg = fmt.Sprintf("[OK] Список доменов %q добавлен", name)
 		}
 		m.Modal = ModalState{Type: ModalNone}
 
@@ -697,11 +697,11 @@ func (m *Model) submitCurrentModal() {
 		domStr := m.getFieldValue("Домены (через запятую)")
 
 		if newName == "" {
-			m.LogMsg = "⚠️ Ошибка: имя списка не может быть пустым!"
+			m.LogMsg = "[!] Ошибка: имя списка не может быть пустым!"
 			return
 		}
 		if m.isListNameTaken(newName, m.SelectedList) {
-			m.LogMsg = fmt.Sprintf("⚠️ Ошибка: Имя списка %q уже занято!", newName)
+			m.LogMsg = fmt.Sprintf("[!] Ошибка: Имя списка %q уже занято!", newName)
 			return
 		}
 
@@ -709,7 +709,7 @@ func (m *Model) submitCurrentModal() {
 		oldList.Domains = splitTrimTUI(domStr)
 		m.IsDirty = true
 		_ = config.Save(m.ConfigPath, m.Mesh)
-		m.LogMsg = fmt.Sprintf("✔ Настройки списка %q сохранены!", newName)
+		m.LogMsg = fmt.Sprintf("[OK] Настройки списка %q сохранены!", newName)
 		m.Modal = ModalState{Type: ModalNone}
 
 	case ModalGit:
@@ -723,9 +723,9 @@ func (m *Model) submitCurrentModal() {
 		} else {
 			outPush, errP := exec.Command("git", "push").CombinedOutput()
 			if errP != nil {
-				m.LogMsg = fmt.Sprintf("✔ Коммит создан. Git push ошибка: %v (%s)", errP, string(outPush))
+				m.LogMsg = fmt.Sprintf("[OK] Коммит создан. Git push ошибка: %v (%s)", errP, string(outPush))
 			} else {
-				m.LogMsg = "✔ Изменения успешно закоммичены и отправлены в Git (push)!"
+				m.LogMsg = "[OK] Изменения успешно закоммичены и отправлены в Git (push)!"
 			}
 		}
 		m.Modal = ModalState{Type: ModalNone}
@@ -1088,7 +1088,7 @@ func (m *Model) handleDeleteCurrent() {
 			m.Mesh.Clients = append(m.Mesh.Clients[:m.SelectedClient], m.Mesh.Clients[m.SelectedClient+1:]...)
 			m.IsDirty = true
 			_ = config.Save(m.ConfigPath, m.Mesh)
-			m.LogMsg = fmt.Sprintf("✔ Клиент %q удалён", cName)
+			m.LogMsg = fmt.Sprintf("[OK] Клиент %q удалён", cName)
 		}
 
 	case PaneLists:
@@ -1097,7 +1097,7 @@ func (m *Model) handleDeleteCurrent() {
 			m.Mesh.Lists = append(m.Mesh.Lists[:m.SelectedList], m.Mesh.Lists[m.SelectedList+1:]...)
 			m.IsDirty = true
 			_ = config.Save(m.ConfigPath, m.Mesh)
-			m.LogMsg = fmt.Sprintf("✔ Список %q удалён", lName)
+			m.LogMsg = fmt.Sprintf("[OK] Список %q удалён", lName)
 		}
 	}
 }
@@ -1108,7 +1108,7 @@ func (m *Model) removeNodeByIdx(idx int) {
 		m.Mesh.Nodes = append(m.Mesh.Nodes[:idx], m.Mesh.Nodes[idx+1:]...)
 		m.IsDirty = true
 		_ = config.Save(m.ConfigPath, m.Mesh)
-		m.LogMsg = fmt.Sprintf("✔ Нода %q удалена", name)
+		m.LogMsg = fmt.Sprintf("[OK] Нода %q удалена", name)
 		if m.SelectedNode > 0 {
 			m.SelectedNode--
 		}
@@ -1121,7 +1121,7 @@ func (m *Model) removeRouteByIdx(idx int) {
 		m.Mesh.Routes = append(m.Mesh.Routes[:idx], m.Mesh.Routes[idx+1:]...)
 		m.IsDirty = true
 		_ = config.Save(m.ConfigPath, m.Mesh)
-		m.LogMsg = fmt.Sprintf("✔ Маршрут %q удалён", name)
+		m.LogMsg = fmt.Sprintf("[OK] Маршрут %q удалён", name)
 		if m.SelectedRoute > 0 {
 			m.SelectedRoute--
 		}
@@ -1133,7 +1133,7 @@ func (m *Model) handleTeardownNode() {
 		return
 	}
 	node := &m.Mesh.Nodes[m.SelectedNode]
-	m.LogMsg = fmt.Sprintf("→ Удаляю WG-конфигурацию с %q (%s)…", node.Name, node.Host)
+	m.LogMsg = fmt.Sprintf("-> Удаляю WG-конфигурацию с %q (%s)...", node.Name, node.Host)
 	d, err := drivers.New(node)
 	if err != nil {
 		m.LogMsg = fmt.Sprintf("Ошибка драйвера: %v", err)
@@ -1142,7 +1142,7 @@ func (m *Model) handleTeardownNode() {
 	if err := d.RemoveConfig(node); err != nil {
 		m.LogMsg = fmt.Sprintf("Ошибка teardown: %v", err)
 	} else {
-		m.LogMsg = fmt.Sprintf("✔ WG конфигурация с %q удалена!", node.Name)
+		m.LogMsg = fmt.Sprintf("[OK] WG конфигурация с %q удалена!", node.Name)
 	}
 }
 
@@ -1210,9 +1210,9 @@ func (m *Model) runApply() {
 	}
 
 	if len(failed) > 0 {
-		m.LogMsg = fmt.Sprintf("✖ Ошибка применения на нодах: %v", failed)
+		m.LogMsg = fmt.Sprintf("[FAIL] Ошибка применения на нодах: %v", failed)
 	} else {
-		m.LogMsg = "✔ Конфигурация успешно применена ко всем участвующим нодам по SSH!"
+		m.LogMsg = "[OK] Конфигурация успешно применена ко всем участвующим нодам по SSH!"
 	}
 }
 
@@ -1223,10 +1223,10 @@ func (m *Model) runDoctor() {
 
 	// Config
 	if err := mesh.Validate(m.Mesh); err != nil {
-		lines = append(lines, fmt.Sprintf("[✖] Config       | Синтаксис и граф: %v", err))
+		lines = append(lines, fmt.Sprintf("[FAIL] Config       | Синтаксис и граф: %v", err))
 		hasFail = true
 	} else {
-		lines = append(lines, fmt.Sprintf("[✔] Config       | Синтаксис и граф: ОК (%d нод, %d маршрутов)", len(m.Mesh.Nodes), len(m.Mesh.Routes)))
+		lines = append(lines, fmt.Sprintf("[OK] Config       | Синтаксис и граф: ОК (%d нод, %d маршрутов)", len(m.Mesh.Nodes), len(m.Mesh.Routes)))
 	}
 
 	// Security
@@ -1237,20 +1237,20 @@ func (m *Model) runDoctor() {
 		}
 	}
 	if len(secretWarns) > 0 {
-		lines = append(lines, fmt.Sprintf("[⚠️] Security     | Секреты в YAML: Приватный ключ сохранён на %s", strings.Join(secretWarns, ", ")))
+		lines = append(lines, fmt.Sprintf("[WARN] Security     | Секреты в YAML: Приватный ключ сохранён на %s", strings.Join(secretWarns, ", ")))
 		hasWarn = true
 	} else {
-		lines = append(lines, "[✔] Security     | Секреты в YAML: В mesh.yaml нет открытых приватных ключей")
+		lines = append(lines, "[OK] Security     | Секреты в YAML: В mesh.yaml нет открытых приватных ключей")
 	}
 
 	// SSH reachability
 	reachability := mesh.CheckReachability(m.Mesh, 3*time.Second)
 	for _, n := range m.Mesh.Nodes {
 		if rErr, failed := reachability[n.Name]; failed {
-			lines = append(lines, fmt.Sprintf("[✖] SSH          | %s (%s): %v", n.Name, n.Host, rErr))
+			lines = append(lines, fmt.Sprintf("[FAIL] SSH          | %s (%s): %v", n.Name, n.Host, rErr))
 			hasFail = true
 		} else {
-			lines = append(lines, fmt.Sprintf("[✔] SSH          | %s (%s): TCP соединение установлено", n.Name, n.Host))
+			lines = append(lines, fmt.Sprintf("[OK] SSH          | %s (%s): TCP соединение установлено", n.Name, n.Host))
 		}
 	}
 
@@ -1372,7 +1372,7 @@ func (m Model) View() string {
 	header := lipgloss.NewStyle().
 		Bold(true).
 		Foreground(lipgloss.Color("86")).
-		Render(fmt.Sprintf("═══ %s (wgmesh TUI) ═══", m.Mesh.Name))
+		Render(fmt.Sprintf("=== Топология сети: %s (версия %s) ===", m.Mesh.Name, m.Version))
 
 	topView := RenderTopology(m.Mesh, m.SelectedRoute, totalWidth)
 
