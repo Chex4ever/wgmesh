@@ -42,27 +42,22 @@
 (разрешён только `de/32`, а клиентский destined-пакет идёт на внешние сети через туннельную
 цепочку mesh_ip). Нужны транзитные AllowedIPs.
 
-### 1.2 Решение: модель «next-hop = весь mesh»
+### 1.2 Решение: изоляция интерфейсов/маршрутизации и модель AllowedIPs
 
-Правило генерации AllowedIPs для каждого peer'а на каждой ноде:
+В WireGuard таблицы `AllowedIPs` на одном интерфейсе являются уникальным ключом маршрутизации. Задание одинакового `mesh_cidr` нескольким peer'ам на одном `wg`-интерфейсе приводит к коллизии маршрутов в ядре.
 
-| Кто peer относительно нас | AllowedIPs |
+Для обеспечения работы цепочек произвольной длины и нескольких exit-маршрутов применяется **схема раздельных интерфейсов (или точной Policy Routing по fwmark)**:
+
+| Сценарий | Интерфейсы и AllowedIPs |
 |---|---|
-| Прямой сосед по цепочке, который НЕ является нами exit-последним звеном | `peer.mesh_ip/32` **+ `mesh.cidr`** (транзит) |
-| Exit-нода со стороны её непосредственного предшественника | `peer.mesh_ip/32` + `mesh.cidr` + (для клиента) `0.0.0.0/0` |
-| Клиент маршрута, где мы — первый hop | `client_ip/32`; если мы также exit (1-hop маршрут) — + `0.0.0.0/0` |
-| Клиент маршрута, где мы НЕ первый hop | не добавляем (клиентский peer настраивается только на первом hop) |
-
-Итого упрощённое инвариантное правило: **каждый WG-туннельный peer соседа получает
-`mesh_cidr`**, а `0.0.0.0/0` — только на последнем прыжке от того узла, который смотрит
-в exit напрямую (у relay это уже покрыто транзитным `mesh_cidr`, т.к. relay переинкапсулирует).
+| **Одноранговое звено (Hop A → Hop B)** | Каждое транзитное соединение настраивается либо на выделенном интерфейсе (`wg-<route>`), либо с уникальной таблицей маршрутизации (Table ID/fwmark).<br>На транзитном peer'е: AllowedIPs включает `peer.mesh_ip/32` + подсети клиентов этого маршрута (`client_ip/32`) + (для движения к exit) `0.0.0.0/0`. |
+| **Exit-нода** | Принимает трафик от предшествующего relay (`AllowedIPs = relay_mesh_ip/32` + `client_ip/32`) и выполняет NAT/MASQUERADE в свой WAN. |
+| **Клиент первого хопа** | `AllowedIPs` у первого хопа содержит `client_ip/32`. |
 
 ### 1.3 Задачи
 
 - [ ] **M1.** В `internal/mesh/manager.go` реализовать `AllowedIPsForPeer(self *config.Node, peer *config.Node, m *config.Mesh) []string`
-      — чистая функция, без I/O. Удалить/переписать мёртвый `AllowedIPsForHop`.
-      Таблица соответствия ролей берётся из `BuildPlan` (добавить в `NodePlan` поле
-      `NextHops map[string]bool` — соседи, лежащие ближе к exit, чем `self`).
+      — чистая функция, без I/O. Рассчитывает AllowedIPs без коллизий (с учётом ролей хопов в цепочке).
 - [ ] **M2.** Перевести `buildNodeSpec` (`internal/cli/apply.go`) на `AllowedIPsForPeer`;
       убрать спец-логику `isExitNode` из cli — она переезжает в mesh-пакет.
 - [ ] **M3.** Forwarding на промежуточных нодах: проверить, что `NodeApplySpec.Forward=true`
@@ -73,13 +68,43 @@
       рвёт живые сессии. Тест на стабильность рендера (§6 T-M4).
 - [ ] **M5.** Маршруты длиной 1 hop (`client → exit`) должны работать без регрессий;
       маршруты 2+ hops — основной кейс (§6 T-M5, интеграция на двух LXC/VM или docker-netns).
+- [ ] **M6 (New).** **TCP MSS Clamping & MTU Handling**:
+      В многохоповых WireGuard туннелях из-за оверхеда заголовков (60B IPv4 / 80B IPv6) пакетам требуется корректный MTU (1360–1420) и автоматический TCP MSS Clamping.
+      На всех relay и exit нодах добавляется фильтр: `iptables -t mangle -A FORWARD -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu` (или эквивалент в nftables/RouterOS). Это предотвращает зависание HTTPS/TLS Handshake при работе через multihop.
 
-### 1.4 Критерии приёмки
+### 1.4 Селективная маршрутизация (домены/IP) и учёт клиентов (Multi-Client Source Routing)
+
+Поддерживаются расширенные правила маршрутизации в `mesh.yaml` v2:
+- **Учёт источника трафика (`from: [...]`)**: маршрут привязывается к конкретным клиентам (`alice-phone`, `bob-laptop`, `home-router`) или входным узлам (ingress).
+- **Выборочный трафик (`match: ...`)**: указание списков доменов (`lists: youtube-list`) или подсетей для отправки через конкретную цепочку.
+
+```yaml
+clients:
+  - name: alice-phone
+    ip: 10.66.100.1
+    ingress: kz-server
+
+lists:
+  - name: youtube-domains
+    domains: ["youtube.com", "*.googlevideo.com"]
+
+routes:
+  - name: youtube-via-de
+    from: [alice-phone]
+    match: { list: youtube-domains }
+    path: [kz-server, de-server]
+    exit_node: de-server
+```
+
+- [ ] **M7 (New).** **Поддержка YAML v2 Schema**: Добавление структур `Client`, `DomainList`, `TrafficMatch` в `internal/config/types.go` и валидатора связей `from -> clients` и `match -> lists`.
+
+### 1.5 Критерии приёмки
 
 - Цепочка `client → A → B → C(exit)`: с клиента `curl ifconfig.me` даёт IP ноды C;
-  `traceroute` показывает A, B внутри mesh-подсети.
+  `traceroute` показывает A, B внутри mesh-подсети; веб-сайты и heavy TLS соединения не виснут благодаря TCP MSS Clamping.
 - Повторный `meshctl apply` не разрывает существующие туннели (handshake не сбрасывается).
-- `meshctl apply --dry-run` печатает AllowedIPs каждого peer'а — видно транзит `mesh_cidr`.
+- `meshctl apply --dry-run` печатает AllowedIPs каждого peer'а — видно отсутствие коллизий маршрутизации.
+- Разные клиенты могут иметь разные цепочки и списки доменов.
 
 ---
 

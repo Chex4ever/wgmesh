@@ -1,70 +1,36 @@
-# meshctl
+# meshctl (wgmesh)
 
-CLI-менеджер одноранговых (peer-to-peer) WireGuard mesh-сетей с multihop exit-маршрутами.
-Один бинарник на Go, YAML-конфиги (версионируются в Git), без центрального сервера.
-Архитектура и roadmap — в [Plan-001.md](./Plan-001.md).
+CLI/TUI-менеджер одноранговых (peer-to-peer) WireGuard & AmneziaWG mesh-сетей с multihop exit-маршрутами, селективным туннелированием по доменам (Split Tunneling) и мульти-клиентской маршрутизацией.
 
-## Возможности (Фаза 1 — MVP)
+Один бинарник на Go, YAML-конфиги (версионируются в Git), управление роутерами и VPS по SSH, без центрального сервера (Zero-Server / Zero-Agent).
 
-- `meshctl init` — создать `mesh.yaml` с дефолтной конфигурацией;
-- `meshctl node add|list|remove` — управление нодами (linux / mikrotik / openwrt);
-- `meshctl route add|list|remove` — exit-маршруты: `--path client,nodeA,nodeB --exit nodeB`;
-- `meshctl apply [--dry-run|--check]` — генерация WG-ключей и mesh_ip, валидация,
-  построение wg-quick конфигов и применение к Linux-нодам по SSH
-  (wg-quick + iptables NAT/forwarding);
-- `meshctl client-config <route> [--qr]` — клиентский `.conf` + QR-код (PNG).
+Подробная архитектура и план развития — в документах [Plan-001.md](./Plan-001.md), [Plan-002.md](./Plan-002.md), [Plan-003.md](./Plan-003.md) и [Plan-004.md](./Plan-004.md).
 
-Mikrotik/OpenWRT драйверы, TUI и мониторинг — в Фазах 2–4 (см. план).
+---
 
-## Сборка и установка
+## 🔥 Ключевые особенности
 
-```bash
-git clone https://github.com/meshctl/meshctl
-cd meshctl
-go build -trimpath -ldflags "-s -w -X github.com/meshctl/meshctl/internal/cli.Version=$(git describe --tags --always)" \
-  -o meshctl ./cmd/meshctl
+- **Zero-Server & Zero-Agent**: Работает локально, настраивает VPS и роутеры по SSH без установки управляющих серверов и фоновых даемонов.
+- **Multihop Chaining**: Произвольные цепочки узлов (`Client → KZ Server → DE Exit Server`).
+- **Селективная маршрутизация (Domain/IP Split Tunneling)**: Настройка правил для конкретных сайтов (например, `youtube.com` через Германию, `antigravity.com` через Казахстан).
+- **Мульти-клиентская маршрутизация**: Учёт источника трафика (`from: [alice-phone, home-mikrotik]`) — каждый клиент или роутер может иметь свои правила и цепочки выхода.
+- **Гетерогенные узлы**: Прямая поддержка **Linux** (wg-quick, iptables/nftables), **Mikrotik RouterOS 7** (`/interface wireguard`, `/ip dns static`, address-lists, mangle) и **OpenWRT** (UCI + fw4).
+- **Защита от DPI (AmneziaWG)**: Поддержка заголовков H1-H4, размеров S1-S4 и мусора Jc/Jmin/Jmax на межсерверных звеньях.
+- **Гибкий экспорт**: Генерация конфигов и QR-кодов в форматах **WireGuard**, **AmneziaVPN**, **Sing-box JSON** (с автоматически запечёнными доменными правилами) и **Universal URIs** (`sing-box://`, `wireguard://`).
+- **Интерактивный TUI**: ASCII-визуализация топологии сети на Bubble Tea / Lipgloss.
 
-# или установщик (кладёт бинарник в /usr/local/bin):
-./scripts/install.sh
+---
 
-# или go install
-go install github.com/meshctl/meshctl/cmd/meshctl@latest
-```
+## 📋 Конфигурация (`mesh.yaml` v2)
 
-Кросс-компиляция:
-
-```bash
-GOOS=linux GOARCH=amd64 go build -o dist/meshctl-linux-amd64 ./cmd/meshctl
-GOOS=linux GOARCH=arm64 go build -o dist/meshctl-linux-arm64 ./cmd/meshctl
-GOOS=darwin GOARCH=arm64 go build -o dist/meshctl-darwin-arm64 ./cmd/meshctl
-```
-
-## Быстрый старт
-
-```bash
-meshctl init --name "My Mesh"
-meshctl node add kz-server --type linux --host 109.248.198.55 --user root
-meshctl node add de-server --type linux --host 194.87.71.7 --user root --wg-port 51821
-meshctl route add via-kz    --path client,kz-server --exit kz-server
-meshctl route add via-kz-de --path client,kz-server,de-server --exit de-server
-meshctl apply --dry-run          # посмотреть план без изменений
-meshctl apply                    # настроить ноды по SSH
-meshctl client-config via-kz-de --qr
-```
-
-Порт `--wg-port` (и/или `--wg-interface`) должен быть уникальным для каждой ноды
-на одном хосте — валидатор ловит конфликты `interface:port`.
-
-## Конфигурация
-
-Главный файл — `mesh.yaml` (путь переопределяется флагом `--config`).
-Примеры: [`configs/mesh.yaml`](./configs/mesh.yaml) и
-[`configs/nodes/kz-server.yaml`](./configs/nodes/kz-server.yaml).
+Пример декларативной конфигурации с выборочной маршрутизацией:
 
 ```yaml
 name: "My Mesh Network"
-version: 1
-cidr: 10.66.0.0/24        # mesh-подсеть (нодам раздаются .10+, клиентам — .100+)
+version: 2
+cidr: 10.66.0.0/16        # mesh-подсеть
+
+# Ноды сети (Linux VPS, роутеры Mikrotik / OpenWRT)
 nodes:
   - name: kz-server
     type: linux            # linux | mikrotik | openwrt
@@ -72,35 +38,153 @@ nodes:
     ssh_user: root
     ssh_key: ~/.ssh/id_rsa
     wireguard: { interface: wg0, listen_port: 51820 }
+
+  - name: de-server
+    type: linux
+    host: 194.87.71.7
+    ssh_user: root
+    ssh_key: ~/.ssh/id_rsa
+    wireguard: { interface: wg0, listen_port: 51820 }
+
+  - name: home-router
+    type: mikrotik
+    host: 192.168.1.1
+    ssh_user: admin
+    mikrotik: { wan_interface: "ether1" }
+
+# Клиенты (устройства пользователей)
+clients:
+  - name: alice-phone
+    ip: 10.66.100.1
+    ingress: kz-server
+
+  - name: bob-laptop
+    ip: 10.66.100.2
+    ingress: de-server
+
+# Списки доменов и IP для выборочного туннелирования
+lists:
+  - name: youtube-list
+    domains:
+      - "youtube.com"
+      - "*.googlevideo.com"
+      - "ytimg.com"
+
+  - name: work-apps
+    domains:
+      - "antigravity.com"
+      - "*.internal.company"
+    ips:
+      - "195.201.0.0/16"
+
+# Маршруты и правила распределения трафика
 routes:
-  - name: via-kz-de
-    path: [client, kz-server, de-server]
+  # YouTube уходит через Германию для Алисы и домашнего роутера
+  - name: youtube-via-de
+    from: [alice-phone, home-router]
+    match:
+      list: youtube-list
+    path: [kz-server, de-server]
     exit_node: de-server
+    link_obfuscation:
+      "kz-server->de-server": "ampere" # AmneziaWG на международном плече
+
+  # Рабочие приложения уходят через Казахстан для всех клиентов
+  - name: work-via-kz
+    from: [alice-phone, bob-laptop, home-router]
+    match:
+      list: work-apps
+    path: [kz-server]
+    exit_node: kz-server
+
+  # Дефолтный трафик Алисы
+  - name: default-alice
+    from: [alice-phone]
+    match: default
+    path: [kz-server]
+    exit_node: kz-server
 ```
 
-Приватные/публичные ключи и `mesh_ip` заполняются автоматически при `apply`
-(генерация на curve25519, без бинарника `wg`). Ключи клиентов кэшируются в
-секции `clients:` того же файла командой `client-config`.
+---
 
-## Структура репозитория
+## ⚡ Быстрый старт
+
+```bash
+# Инициализация нового проекта
+meshctl init --name "My Mesh"
+
+# Добавление нод
+meshctl node add kz-server --type linux --host 109.248.198.55 --user root
+meshctl node add de-server --type linux --host 194.87.71.7 --user root
+meshctl node add home-router --type mikrotik --host 192.168.1.1 --user admin
+
+# Создание маршрута
+meshctl route add via-kz-de --path client,kz-server,de-server --exit de-server
+
+# Проверка плана без изменений
+meshctl apply --dry-run
+
+# Настройка нод по SSH
+meshctl apply
+
+# Экспорт конфигов
+meshctl client-config via-kz-de --qr                           # Стандартный WG + QR
+meshctl export --client alice-phone --format sing-box -o alice.json # Sing-box с доменными правилами
+meshctl export --client alice-phone --format uri                    # 1-click URI ссылка
+```
+
+---
+
+## 💻 Интерактивный TUI
+
+Запуск консольного интерфейса:
+
+```bash
+meshctl tui
+```
+
+В TUI доступны:
+- ASCII-визуализация топологии сети и цепочек хопов;
+- Навигация и интерактивное редактирование маршрутов (`+` / `-` / `←` / `→`);
+- Просмотр статусов нод и ping/latency;
+- Просмотр лога `apply` в реальном времени;
+- Экспорт конфигов и просмотр QR-кода (клавиша `x`).
+
+---
+
+## 🛠️ Сборка и установка
+
+```bash
+git clone https://github.com/meshctl/meshctl
+cd meshctl
+go build -trimpath -ldflags "-s -w -X github.com/meshctl/meshctl/internal/cli.Version=$(git describe --tags --always)" \
+  -o meshctl ./cmd/meshctl
+
+# Кросс-компиляция:
+GOOS=linux GOARCH=amd64 go build -o dist/meshctl-linux-amd64 ./cmd/meshctl
+GOOS=linux GOARCH=arm64 go build -o dist/meshctl-linux-arm64 ./cmd/meshctl
+GOOS=darwin GOARCH=arm64 go build -o dist/meshctl-darwin-arm64 ./cmd/meshctl
+```
+
+---
+
+## 📁 Структура репозитория
 
 ```
-cmd/meshctl/        точка входа
-internal/cli/       команды Cobra (init, node, route, apply, client-config)
-internal/config/    YAML-типы, загрузка/сохранение
-internal/wg/        генерация ключей, рендеринг wg-quick конфигов
-internal/mesh/      менеджер применения (план, ключи, адреса) + валидатор
-internal/drivers/   Driver-абстракция; linux (SSH+wg-quick+iptables), заглушки mikrotik/openwrt
-configs/            примеры конфигураций
+cmd/meshctl/        Точка входа
+internal/cli/       Команды Cobra (init, node, route, apply, client-config, export, git)
+internal/config/    YAML-типы (Mesh, Node, Route, Client, DomainList, Obfuscation)
+internal/tui/       Интерфейс Bubble Tea (топология, редактор, монитор)
+internal/wg/        Генерация ключей, рендеринг WireGuard / AmneziaWG
+internal/export/    Реестр экспорта (WireGuard, Amnezia, Sing-box JSON, URI, QR)
+internal/mesh/      Ядро применения (план, ключи, валидация, policy routing)
+internal/drivers/   Драйверы платформ (Linux, Mikrotik RouterOS 7, OpenWRT)
+configs/            Примеры конфигураций
 scripts/            install.sh
 ```
 
-## Разработка
+---
 
-```bash
-go build ./... && go vet ./... && go test ./...
-```
-
-## Лицензия
+## 📜 Лицензия
 
 MIT — см. [LICENSE](./LICENSE).

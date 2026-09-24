@@ -114,6 +114,7 @@ TUI (скрытие недоступных опций формы ноды).
 - Config-поля микротика (в `config.Node`, yaml `mikrotik:` блок, опционально):
   ```yaml
   mikrotik:
+    wan_interface: "ether1"    # Явное указание WAN-интерфейса (если автоопределение по default route неподходящее)
     winbox_port_check: true   # перед apply убедиться, что API/SSH включены
     comment_prefix: "meshctl" # комментарии в правилах для идентификации
   ```
@@ -130,10 +131,13 @@ TUI (скрытие недоступных опций формы ноды).
 3. Адрес: `/ip address add address=<mesh_ip>/24 interface=wg0` (upsert).
 4. Если `Forward`: убедиться `routing table main` ок; если `NAT` (exit):
    `/ip firewall nat add chain=srcnat out-interface=<wan> action=masquerade comment="meshctl-nat"`
-   где WAN определяется как интерфейс с default route (`/ip route print where dst-address=0.0.0.0/0`).
-   Также `/ip firewall filter add chain=forward in-interface=wg0 action=accept comment="meshctl-fwd"`
-   (+ return для established) — не ломать существующий firewall!
-5. Проверка: `/ping <peer_mesh_ip>` до непосредственного соседа (если сосед уже настроен),
+   где WAN определяется либо по полю `wan_interface`, либо автоматически по интерфейсу default route (`/ip route print where dst-address=0.0.0.0/0`).
+5. **Селективная маршрутизация по доменам/IP (Domain Split Tunneling)**:
+   При наличии правил `match: { list: ... }` на ноде Mikrotik:
+   - `/ip dns static add name=youtube.com match-subdomain=yes address-list=list-youtube-via-de` (динамическое автозаполнение IPSet при резолве доменов).
+   - `/ip firewall mangle add chain=prerouting dst-address-list=list-youtube-via-de action=mark-routing new-routing-mark=to-de-exit comment="meshctl-route"`
+   - `/ip route add dst-address=0.0.0.0/0 gateway=wg-via-de routing-table=to-de-exit`
+6. Проверка: `/ping <peer_mesh_ip>` до непосредственного соседа (если сосед уже настроен),
    `/interface wireguard print stats` — handshake появился в течение 15 s.
 
 Откат (§4) отключает созданные объекты по комментарий-префиксу `meshctl:`.

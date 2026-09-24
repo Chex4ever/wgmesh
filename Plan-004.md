@@ -105,7 +105,21 @@ home-router   mikrotik  ○       0/2            —         —                
 - Деградация состояния видна цветом: зелёный (все handshake свежее 3×interval) →
   жёлтый (stale) → красный (нет peers ok).
 
-### 2.3 Алерты
+### 2.3 Алерты и Автоматический Failover (Failover / Backup Routes)
+
+Для обеспечения отказоустойчивости в маршрутах поддерживается резервирование (`backup_path` / `fallback_exit`):
+
+```yaml
+routes:
+  - name: via-kz-de
+    path: [client, kz-server, de-server]
+    exit_node: de-server
+    fallback_path: [client, kz-server] # Резервный маршрут при падении de-server
+```
+
+- Если daemon/watch обнаруживает падение `de-server`, `meshctl watch --auto-failover` способен автоматически переключить клиентский exit-трафик на `fallback_path` и уведомить пользователя.
+
+### 2.4 Алерты
 
 Минимальная система без внешних зависимостей, интерфейс `alertnotifier`:
 
@@ -149,39 +163,47 @@ Client-конфиг AmneziaWG понимает; на серверах нужна
 
 ### 3.2 Модель конфига
 
+### 3.2 Модель конфига и Per-Link (поссылочная) обфускация
+
+AmneziaWG требует согласования параметров строго между двумя концами туннеля (peer-to-peer link).
+В многохоповых сетях полезно сочетать **необфусцированное первое плечо** (например, `Home Mikrotik → VPS1 (KZ)` по стандартному WireGuard) и **обфусцированное транзитное плечо** (`VPS1 (KZ) → VPS2 (DE)` по AmneziaWG).
+
 ```yaml
 nodes:
   - name: kz-server
     wireguard:
       interface: wg0
-      obfuscation:            # null = обычный WG
+      obfuscation:            # null = обычный WG на собственных интерфейсах
         preset: "ampere"      # пресеты AmneziaWG: ampere|kwanyee|mirai|rise|rsal|voyager|null
-        # либо ручные поля: h1,h2,h3,h4,s1,s2,s3,s4,jc,jmin,jmax
+
+routes:
+  - name: via-kz-de
+    path: [client, kz-server, de-server]
+    exit_node: de-server
+    link_obfuscation:         # Поссылочная настройка
+      "kz-server->de-server": "ampere" # Только звено KZ-DE использует AmneziaWG
 ```
 
 - [ ] **A1.** `internal/wg/obfuscation.go`: тип `ObfuscationParams`, пресеты (таблица из
       AmneziaWG repo, зафиксирована снапшот-тестом), валидация диапазонов, `Equal(a,b)` для
       проверки согласованности пар peer'ов.
-- [ ] **A2.** Согласование при построении конфига: если у ноды-A и ноды-B разные
-      `obfuscation` — ошибка валидации уровня пары («route via-kz: kz-server и de-server имеют
-      разные параметры обфускации») — ловится ещё до apply.
-- [ ] **A3.** Рендер: клиентский `.conf` получает блок AmneziaWG-параметров;
-      server-side wg-quick конфиг — тоже (amnezia-key совместим с обычным wg).
-- [ ] **A4.** Установка: linux-driver при `obfuscation != null` ставит модуль:
+- [ ] **A2.** Согласование при построении конфига: проверка параметров производится **позвенно** (`link_obfuscation`). Если звено `A->B` помечено обфускацией, но одна из нод ее не поддерживает (например Mikrotik) — выдается точная ошибка валидации.
+- [ ] **A3.** Рендер: клиентский `.conf` получает блок AmneziaWG-параметров только если первое звено `client->hop1` обфусцировано;
+      server-side wg-quick конфиг — на соответствующих интер-VPS звеньях.
+- [ ] **A4.** Установка: linux-driver при наличие `obfuscation != null` на звеньях ставит модуль:
       скрипт `scripts/install-amnezia.sh` (DKMS) как PostUp-проверка Preflight
       (`modinfo amneziawg`); без модуля — понятная ошибка со ссылкой на инструкцию.
-      Mikrotik/OpenWRT: обфускация НЕ поддерживается → capability matrix (П3 §1.3)
-      `SupportsObfuscation=false`, валидатор запрещает смешивать hop-AmneziaWG с hop-Mikrotik в одной цепи.
-- [ ] **A5.** CLI: `meshctl route add ... --obfuscate [preset]` (из Plan-001) — проставляет
-      параметр всем нодам маршрута + предупреждение о перезагрузке WG-модуля;
+      Mikrotik/OpenWRT: обфускация НЕ поддерживается на их интерфейсах, но они **могут** выступать первым хопом к Linux-ноде по обычному WG.
+- [ ] **A5.** CLI: `meshctl route add ... --obfuscate [preset]` — проставляет
+      параметр обфускации для межсерверных звеньев;
       `meshctl node set-obfuscation <node> <preset>|none`.
 
 ### 3.3 Acceptance (§3)
 
-- [ ] AC-A1: маршрут `client(amnezia) → kz(amnezia) → de(exit)` поднимается, трафик идёт,
-      Wireshark на внешнем интерфейсе kz не видит magic WG handshake (проверка вручную, лог в PR).
-- [ ] AC-A2: рассогласование параметров между соседями диагностируется до apply.
-- [ ] AC-A3: mikrotik в цепи с obfuscation-нодой → ошибка валидации с объяснением.
+- [ ] AC-A1: маршрут `mikrotik(std WG) → kz(relay, AWG) → de(exit, AWG)` поднимается, трафик идёт,
+      Wireshark на внешнем интерфейсе kz между KZ и DE не видит magic WG handshake.
+- [ ] AC-A2: рассогласование параметров на конкретном звене диагностируется до apply.
+- [ ] AC-A3: попытка включить AWG на звене прямо к mikrotik → ошибка валидации с объяснением.
 
 ---
 
@@ -193,23 +215,21 @@ nodes:
 |---|---|---|
 | wireguard | `meshctl export <route> --format wireguard -o client.conf` | стандартный `.conf` (перенос существующего client-config; `client-config` становится алиасом) |
 | amnezia | `meshctl export <route> --format amnezia -o profile.json` | формат AmneziaVPN import (JSON-профиль: `type: "amnezia-wireguard"`, поля H/S/J + keys) — открывать в приложении Amnezia |
-| qr | `meshctl export <route> --format wireguard --qr` | PNG QR (уже есть в client-config — переиспользовать рендер `internal/wg`) |
-
-Shadowsocks-совместимость — ❌ НЕ в этой фазе (future work, зафиксировать в docs/roadmap-backlog.md).
+| sing-box | `meshctl export <route> --format sing-box -o config.json` | JSON профиль клиентского аутбаунда для Sing-box (iOS/Android/Desktop), включая поддержку AWG параметров |
+| uri | `meshctl export <route> --format uri` | Вывод `sing-box://` или `wireguard://` URI ссылки / QR кода для 1-click импорта в Shadowrocket, Streisand, Hiddify, Nekobox |
+| qr | `meshctl export <route> --format wireguard --qr` | PNG QR (переиспользует рендер `internal/wg`) |
 
 ### 4.2 Задачи
 
 - [ ] **E1.** `internal/export/` — registry форматов: `Format{Name, Render(mesh, route, clientKeys) ([]byte, error)}`.
       Добавление нового формата = новый файл + регистрация (open/closed).
-- [ ] **E2.** Amnezia-профиль: точное соответствие схеме импорта Amnezia (проверить на актуальной
-      версии приложения; снапшот golden-файл `testdata/amnezia_profile.golden.json`).
-      Приватный ключ клиента — генерируется/читается из client-state (механизм `clientPublicKey`
-      из cli/client.go вынести в `internal/clientstore`).
-- [ ] **E3.** `meshctl export --all-formats --outdir ./dist-configs` — пакет для раздачи
-      (имена файлов `<mesh>-<route>.<ext>`).
+- [ ] **E2.** Amnezia & Sing-box профили: точное соответствие схемам импорта Amnezia и Sing-box (с интеграцией AWG полей H1-H4/S1-S4/Jc).
+      Для Sing-box при экспорте под конкретного клиента (`meshctl export --client alice-phone --format sing-box`): автоматически генерируются `route.rules` в Sing-box JSON, сопоставляющие доменные списки (`youtube.com` -> `outbound-via-de`, `antigravity.com` -> `outbound-via-kz`).
+      Приватный ключ клиента — генерируется/читается из client-state.
+- [ ] **E3.** `meshctl export --all-formats --outdir ./dist-configs` — пакет всех доступных форматов для раздачи.
 - [ ] **E4.** Безопасность: экспорт содержит private key клиента → warning при записи
       в world-writable каталог; stdout при pipe остаётся чистым (warnings — в stderr).
-- [ ] **E5.** TUI: в detail-панели маршрута — action `x` → выбор формата → сохранение + показ QR.
+- [ ] **E5.** TUI: в detail-панели маршрута — action `x` → выбор формата (WireGuard, Amnezia, Sing-box, QR) → сохранение/показ.
 
 ### 4.3 Acceptance (§4)
 
