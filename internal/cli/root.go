@@ -33,6 +33,7 @@ func Execute() {
 		nodeCmd(),
 		routeCmd(),
 		planCmd(),
+		statusCmd(),
 		applyCmd(),
 		clientConfigCmd(),
 		tuiCmd(),

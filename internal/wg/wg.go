@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
+	"net"
 	"strings"
 
 	"golang.org/x/crypto/curve25519"
@@ -67,6 +68,35 @@ type PeerConf struct {
 	AllowedIPs          []string
 	Endpoint            string // host:port (для исходящих пиеров; пусто на серверах)
 	PersistentKeepalive int
+}
+
+// EndpointHost возвращает имя хоста/IP из Endpoint (без порта).
+func (p *PeerConf) EndpointHost() string {
+	if p.Endpoint == "" {
+		return ""
+	}
+	host, _, err := net.SplitHostPort(p.Endpoint)
+	if err != nil {
+		return p.Endpoint
+	}
+	return host
+}
+
+// EndpointPort возвращает порт из Endpoint (или 51820 по умолчанию).
+func (p *PeerConf) EndpointPort() int {
+	if p.Endpoint == "" {
+		return 51820
+	}
+	_, portStr, err := net.SplitHostPort(p.Endpoint)
+	if err != nil {
+		return 51820
+	}
+	var port int
+	fmt.Sscanf(portStr, "%d", &port)
+	if port == 0 {
+		return 51820
+	}
+	return port
 }
 
 // ClientConfig — данные для рендеринга клиентского .conf.

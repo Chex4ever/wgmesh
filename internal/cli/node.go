@@ -8,15 +8,16 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/meshctl/meshctl/internal/config"
+	"github.com/meshctl/meshctl/internal/drivers"
 )
 
-// nodeCmd — `meshctl node ...`: add / list / remove.
+// nodeCmd — `meshctl node ...`: add / list / remove / teardown / capabilities.
 func nodeCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "node",
 		Short: "Управление нодами mesh-сети",
 	}
-	cmd.AddCommand(nodeAddCmd(), nodeListCmd(), nodeRemoveCmd())
+	cmd.AddCommand(nodeAddCmd(), nodeListCmd(), nodeRemoveCmd(), nodeTeardownCmd(), nodeCapsCmd())
 	return cmd
 }
 
@@ -152,6 +153,63 @@ func nodeRemoveCmd() *cobra.Command {
 				return err
 			}
 			fmt.Printf("✔ Нода %q удалена\n", name)
+			return nil
+		},
+	}
+}
+
+func nodeTeardownCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "teardown <name>",
+		Short: "Удалить WG конфигурацию с ноды по SSH",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			m, err := loadMesh()
+			if err != nil {
+				return err
+			}
+			name := args[0]
+			node := m.NodeByName(name)
+			if node == nil {
+				return fmt.Errorf("нода %q не найдена", name)
+			}
+			d, err := drivers.New(node)
+			if err != nil {
+				return err
+			}
+			fmt.Printf("→ Удаляю WG конфигурацию с %q (%s)…\n", node.Name, d.Name())
+			if err := d.RemoveConfig(node); err != nil {
+				return fmt.Errorf("не удалось удалить конфигурацию: %w", err)
+			}
+			fmt.Printf("✔ Конфигурация с ноды %q успешно удалена\n", node.Name)
+			return nil
+		},
+	}
+}
+
+func nodeCapsCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "capabilities <name>",
+		Short: "Показать технологические возможности платформы ноды",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			m, err := loadMesh()
+			if err != nil {
+				return err
+			}
+			name := args[0]
+			node := m.NodeByName(name)
+			if node == nil {
+				return fmt.Errorf("нода %q не найдена", name)
+			}
+			caps := drivers.Capabilities(node.Type)
+			fmt.Printf("Возможности платформы %q (%s):\n", node.Name, node.Type)
+			fmt.Printf("  - PSK Support:         %v\n", caps.SupportsPSK)
+			fmt.Printf("  - Keepalive Support:   %v\n", caps.SupportsKeepalive)
+			fmt.Printf("  - NAT/Masquerade:      %v\n", caps.SupportsNAT)
+			fmt.Printf("  - Multi-Route:         %v\n", caps.SupportsMultiRoute)
+			fmt.Printf("  - AmneziaWG Obfusc:    %v\n", caps.SupportsObfuscation)
+			fmt.Printf("  - Auto Package Inst:   %v\n", caps.NeedsPackageInstall)
 			return nil
 		},
 	}
