@@ -146,6 +146,29 @@ func (m Model) Init() tea.Cmd {
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case checkUpdateMsg:
+		if msg.err != nil {
+			m.Modal.UpdateStatus = fmt.Sprintf("[FAIL] Update check error: %v", msg.err)
+			return m, nil
+		}
+		if !msg.hasUpdate {
+			m.Modal.UpdateStatus = i18n.T("update_latest", m.Version)
+			m.Modal.HasUpdate = false
+			return m, nil
+		}
+		m.Modal.HasUpdate = true
+		m.Modal.UpdateVersion = msg.latestVersion
+		m.Modal.DownloadURL = msg.downloadURL
+		m.Modal.UpdateStatus = i18n.T("update_new", msg.latestVersion, m.Version)
+		return m, nil
+
+	case performUpdateMsg:
+		if msg.err != nil {
+			m.Modal.IsUpdating = false
+			m.Modal.UpdateStatus = fmt.Sprintf("[FAIL] Update error: %v", msg.err)
+		}
+		return m, nil
+
 	case tea.WindowSizeMsg:
 		m.Width = msg.Width
 		m.Height = msg.Height
@@ -198,7 +221,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.openGitModal()
 
 		case "u":
-			m.openUpdateModal()
+			cmd := m.openUpdateModal()
+			return m, cmd
 
 		case "b":
 			m.openBootstrapModal()
@@ -407,7 +431,8 @@ func (m *Model) handleModalKey(key string) (Model, tea.Cmd) {
 		}
 
 	case "enter":
-		m.submitCurrentModal()
+		cmd := m.submitCurrentModal()
+		return *m, cmd
 
 	default:
 		if m.Modal.Type == ModalExport {
@@ -429,7 +454,20 @@ func (m *Model) handleModalKey(key string) (Model, tea.Cmd) {
 	return *m, nil
 }
 
-func (m *Model) submitCurrentModal() {
+func (m *Model) submitCurrentModal() tea.Cmd {
+	if m.Modal.Type == ModalUpdate {
+		if m.Modal.HasUpdate && !m.Modal.IsUpdating {
+			m.Modal.IsUpdating = true
+			m.Modal.UpdateStatus = i18n.T("update_installing")
+			return performUpdateCmd(m.Modal.DownloadURL)
+		}
+		return nil
+	}
+	m.submitFormModal()
+	return nil
+}
+
+func (m *Model) submitFormModal() {
 	switch m.Modal.Type {
 	case ModalBootstrapNode, ModalAddNode:
 		name := m.getFieldValue("Имя ноды")
@@ -730,17 +768,6 @@ func (m *Model) submitCurrentModal() {
 			}
 		}
 		m.Modal = ModalState{Type: ModalNone}
-
-	case ModalUpdate:
-		if m.Modal.HasUpdate && !m.Modal.IsUpdating {
-			m.Modal.IsUpdating = true
-			m.Modal.UpdateStatus = fmt.Sprintf("⏳ Скачивание и запуск скрипта обновления версии %s...", m.Modal.UpdateVersion)
-			downloadURL := m.Modal.DownloadURL
-			if err := updater.PerformUpdate(downloadURL); err != nil {
-				m.Modal.IsUpdating = false
-				m.Modal.UpdateStatus = fmt.Sprintf("❌ Ошибка обновления: %v", err)
-			}
-		}
 	}
 }
 
@@ -1331,28 +1358,44 @@ func (m *Model) openGitModal() {
 	}
 }
 
-func (m *Model) openUpdateModal() {
+type checkUpdateMsg struct {
+	hasUpdate     bool
+	latestVersion string
+	downloadURL   string
+	err           error
+}
+
+type performUpdateMsg struct {
+	err error
+}
+
+func checkUpdateCmd(version string) tea.Cmd {
+	return func() tea.Msg {
+		hasUpdate, latestVer, downloadURL, err := updater.CheckForUpdate(version)
+		return checkUpdateMsg{
+			hasUpdate:     hasUpdate,
+			latestVersion: latestVer,
+			downloadURL:   downloadURL,
+			err:           err,
+		}
+	}
+}
+
+func performUpdateCmd(downloadURL string) tea.Cmd {
+	return func() tea.Msg {
+		err := updater.PerformUpdate(downloadURL)
+		return performUpdateMsg{err: err}
+	}
+}
+
+func (m *Model) openUpdateModal() tea.Cmd {
 	m.Modal = ModalState{
 		Type:         ModalUpdate,
-		UpdateStatus: fmt.Sprintf("🔍 Проверка обновлений (текущая версия: %s)...", m.Version),
+		UpdateStatus: i18n.T("update_checking", m.Version),
+		IsUpdating:   false,
+		HasUpdate:    false,
 	}
-
-	hasUpdate, latestVer, downloadURL, err := updater.CheckForUpdate(m.Version)
-	if err != nil {
-		m.Modal.UpdateStatus = fmt.Sprintf("❌ Ошибка проверки обновлений: %v", err)
-		return
-	}
-
-	if !hasUpdate {
-		m.Modal.UpdateStatus = fmt.Sprintf("✔ У вас установлена самая актуальная версия программы (%s).", m.Version)
-		m.Modal.HasUpdate = false
-		return
-	}
-
-	m.Modal.HasUpdate = true
-	m.Modal.UpdateVersion = latestVer
-	m.Modal.DownloadURL = downloadURL
-	m.Modal.UpdateStatus = fmt.Sprintf("🆕 Найдена новая версия: %s (текущая: %s)\n\nНажмите [Enter] для установки обновления.", latestVer, m.Version)
+	return checkUpdateCmd(m.Version)
 }
 
 func (m Model) View() string {

@@ -27,9 +27,11 @@ func RenderEditorPane(m *config.Mesh, ed *RouteEditor, hoverHopIdx, hoverBtn int
 
 	r := &m.Routes[ed.RouteIdx]
 	var sb strings.Builder
-	sb.WriteString(i18n.T("editor_title", r.Name) + "\n\n")
+	sb.WriteString(i18n.T("editor_title", r.Name))
+	sb.WriteString("\n\n")
 
-	sb.WriteString(i18n.T("editor_hops") + "\n")
+	sb.WriteString(i18n.T("editor_hops"))
+	sb.WriteString("\n")
 	var elements []string
 	arrow := arrowStyle.Render(" ---> ")
 
@@ -60,9 +62,11 @@ func RenderEditorPane(m *config.Mesh, ed *RouteEditor, hoverHopIdx, hoverBtn int
 	}
 
 	chain := lipgloss.JoinHorizontal(lipgloss.Center, elements...)
-	sb.WriteString(indentBlock(chain, 3) + "\n\n")
+	sb.WriteString(indentBlock(chain, 3))
+	sb.WriteString("\n\n")
 
-	sb.WriteString(i18n.T("editor_exit_node", r.ExitNode) + "\n\n")
+	sb.WriteString(i18n.T("editor_exit_node", r.ExitNode))
+	sb.WriteString("\n\n")
 
 	btn0 := i18n.T("editor_add_hop")
 	btn1 := i18n.T("editor_remove_hop")

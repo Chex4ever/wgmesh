@@ -6,6 +6,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/meshctl/meshctl/internal/config"
+	"github.com/meshctl/meshctl/internal/i18n"
 )
 
 func (m *Model) handleMouseMsg(msg tea.MouseMsg) (Model, tea.Cmd) {
@@ -227,60 +228,53 @@ func (m *Model) handleMouseMsg(msg tea.MouseMsg) (Model, tea.Cmd) {
 
 	// E. Нижняя статусный строка (Status Bar)
 	if y >= topHeight+midUpperHeight+midLowerHeight+editorHeight {
-		m.handleStatusBarClick(x)
+		yRelBar := y - (topHeight + midUpperHeight + midLowerHeight + editorHeight)
+		m.handleStatusBarClick(x, yRelBar)
 		return *m, nil
 	}
 
 	return *m, nil
 }
 
-func (m *Model) handleStatusBarClick(x int) {
-	nodeCount := len(m.Mesh.Nodes)
-	routeCount := len(m.Mesh.Routes)
-	dirtyText := ""
-	if m.IsDirty {
-		dirtyText = " * [НЕ СОХРАНЕНО — нажмите 's']"
-	}
-	leftInfo := "Узлы: " + string(rune('0'+nodeCount)) + " | Маршруты: " + string(rune('0'+routeCount)) + " | " + m.ConfigPath + dirtyText
-	leftWidth := len(leftInfo) + 4
-
-	if x < leftWidth {
+func (m *Model) handleStatusBarClick(x, yRel int) {
+	if yRel == 0 {
 		if m.IsDirty {
 			if err := config.Save(m.ConfigPath, m.Mesh); err != nil {
-				m.LogMsg = "Ошибка сохранения: " + err.Error()
+				m.LogMsg = i18n.T("log_save_err", err)
 			} else {
 				m.IsDirty = false
-				m.LogMsg = "[OK] Конфигурация успешно сохранена в " + m.ConfigPath
+				m.LogMsg = i18n.T("log_saved", m.ConfigPath)
 			}
 		}
 		return
 	}
 
-	hintsX := x - leftWidth
 	switch {
-	case hintsX >= 0 && hintsX <= 10:
+	case x <= 9: // [s] Save
 		if err := config.Save(m.ConfigPath, m.Mesh); err != nil {
-			m.LogMsg = "Ошибка сохранения: " + err.Error()
+			m.LogMsg = i18n.T("log_save_err", err)
 		} else {
 			m.IsDirty = false
-			m.LogMsg = "[OK] Конфигурация успешно сохранена в " + m.ConfigPath
+			m.LogMsg = i18n.T("log_saved", m.ConfigPath)
 		}
-	case hintsX > 10 && hintsX <= 22:
-		m.LogMsg = "-> Запуск полного применения (Apply) по SSH..."
+	case x > 9 && x <= 21: // [a] Apply
+		m.LogMsg = i18n.T("log_applying")
 		m.runApply()
-	case hintsX > 22 && hintsX <= 38:
+	case x > 21 && x <= 37: // [b] Bootstrap
 		m.openBootstrapModal()
-	case hintsX > 38 && hintsX <= 51:
+	case x > 37 && x <= 50: // [d] Doctor
 		m.runDoctor()
-	case hintsX > 51 && hintsX <= 64:
+	case x > 50 && x <= 63: // [x] Export
 		if len(m.Mesh.Routes) > 0 && m.SelectedRoute < len(m.Mesh.Routes) {
 			m.handleExportFormat("w")
 		} else {
-			m.LogMsg = "ℹ️ Выберите маршрут для экспорта"
+			m.LogMsg = i18n.T("log_route_protected")
 		}
-	case hintsX > 64 && hintsX <= 74:
+	case x > 63 && x <= 73: // [g] Git
 		m.openGitModal()
-	case hintsX > 74 && hintsX <= 85:
+	case x > 73 && x <= 86: // [u] Update
+		m.openUpdateModal()
+	case x > 86 && x <= 97: // [?] Help
 		m.Modal = ModalState{Type: ModalHelp}
 	}
 }

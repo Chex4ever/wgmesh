@@ -66,15 +66,9 @@ func RenderStatusBar(m *config.Mesh, configPath string, isDirty bool, activePane
 		totalWidth = 40
 	}
 
-	content := lipgloss.JoinHorizontal(
+	fullBar := lipgloss.JoinVertical(
 		lipgloss.Left,
 		leftInfo,
-	)
-
-	fullBar := lipgloss.JoinHorizontal(
-		lipgloss.Left,
-		content,
-		"    ",
 		hints,
 	)
 

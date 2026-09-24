@@ -7,10 +7,11 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"syscall"
 )
 
 var (
-	mu         sync.RWMutex
+	mu          sync.RWMutex
 	currentLang = "en"
 )
 
@@ -41,18 +42,44 @@ func CurrentLanguage() string {
 
 // DetectOSLanguage определяет язык системы. Если язык русский (СНГ) — возвращает "ru", иначе "en".
 func DetectOSLanguage() string {
-	for _, env := range []string{"LANG", "LC_ALL", "LC_MESSAGES"} {
+	for _, env := range []string{"LANG", "LC_ALL", "LC_MESSAGES", "SYSTEMLOCALE"} {
 		val := strings.ToLower(os.Getenv(env))
-		if strings.HasPrefix(val, "ru") {
-			return "ru"
+		if val != "" {
+			if strings.HasPrefix(val, "ru") {
+				return "ru"
+			}
+			if strings.HasPrefix(val, "en") {
+				return "en"
+			}
 		}
 	}
 
 	if runtime.GOOS == "windows" {
-		// В Windows также проверяем типичные переменные или кодовую страницу
 		for _, env := range []string{"LANG", "SYSTEMLOCALE"} {
 			val := strings.ToLower(os.Getenv(env))
 			if strings.Contains(val, "ru") {
+				return "ru"
+			}
+		}
+
+		modKernel32 := syscall.NewLazyDLL("kernel32.dll")
+		procGetUserDefaultUILang := modKernel32.NewProc("GetUserDefaultUILanguage")
+		if procGetUserDefaultUILang.Find() == nil {
+			r1, _, _ := procGetUserDefaultUILang.Call()
+			langID := uint16(r1)
+			primaryLangID := langID & 0x3ff
+			// 0x19 (Russian), 0x22 (Ukrainian), 0x23 (Belarusian), 0x3f (Kazakh)
+			if primaryLangID == 0x19 || primaryLangID == 0x22 || primaryLangID == 0x23 || primaryLangID == 0x3f {
+				return "ru"
+			}
+		}
+
+		procGetSystemDefaultUILang := modKernel32.NewProc("GetSystemDefaultUILanguage")
+		if procGetSystemDefaultUILang.Find() == nil {
+			r1, _, _ := procGetSystemDefaultUILang.Call()
+			langID := uint16(r1)
+			primaryLangID := langID & 0x3ff
+			if primaryLangID == 0x19 || primaryLangID == 0x22 || primaryLangID == 0x23 || primaryLangID == 0x3f {
 				return "ru"
 			}
 		}
