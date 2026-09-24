@@ -34,6 +34,8 @@ func Execute() {
 		routeCmd(),
 		planCmd(),
 		statusCmd(),
+		exportCmd(),
+		gitCmd(),
 		applyCmd(),
 		clientConfigCmd(),
 		tuiCmd(),
