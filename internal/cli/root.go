@@ -40,6 +40,7 @@ func Execute() {
 		tuiCmd(),
 		doctorCmd(),
 		versionCmd(),
+		updateCmd(),
 	)
 
 	if err := root.Execute(); err != nil {

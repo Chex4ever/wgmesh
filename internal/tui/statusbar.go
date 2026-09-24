@@ -42,6 +42,7 @@ func RenderStatusBar(m *config.Mesh, configPath string, isDirty bool, activePane
 		"[d] Doctor",
 		"[x] Export",
 		"[g] Git",
+		"[u] Update",
 		"[?] Help",
 		"[q] Quit",
 	}

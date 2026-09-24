@@ -17,7 +17,7 @@ func runTUICmd(cmd *cobra.Command, args []string) error {
 		_ = saveMesh(m)
 	}
 
-	model := tui.NewModel(m, cfgPath)
+	model := tui.NewModel(m, cfgPath, Version)
 	p := tea.NewProgram(model, tea.WithAltScreen(), tea.WithMouseCellMotion())
 
 	if _, err := p.Run(); err != nil {

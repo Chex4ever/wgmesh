@@ -21,6 +21,7 @@ import (
 	"github.com/meshctl/meshctl/internal/drivers"
 	"github.com/meshctl/meshctl/internal/export"
 	"github.com/meshctl/meshctl/internal/mesh"
+	"github.com/meshctl/meshctl/internal/updater"
 	"github.com/meshctl/meshctl/internal/wg"
 )
 
@@ -54,6 +55,7 @@ const (
 	ModalExport
 	ModalCapabilities
 	ModalGit
+	ModalUpdate
 )
 
 type FormField struct {
@@ -79,11 +81,17 @@ type ModalState struct {
 	QRString      string
 	GitStatus     string
 	CapText       string
+	UpdateStatus  string
+	UpdateVersion string
+	DownloadURL   string
+	HasUpdate     bool
+	IsUpdating    bool
 }
 
 type Model struct {
 	Mesh       *config.Mesh
 	ConfigPath string
+	Version    string
 	IsDirty    bool
 	ActivePane Pane
 
@@ -105,10 +113,15 @@ type Model struct {
 	Applying bool
 }
 
-func NewModel(m *config.Mesh, configPath string) Model {
+func NewModel(m *config.Mesh, configPath string, version ...string) Model {
+	ver := "dev"
+	if len(version) > 0 && version[0] != "" {
+		ver = version[0]
+	}
 	return Model{
 		Mesh:           m,
 		ConfigPath:     configPath,
+		Version:        ver,
 		ActivePane:     PaneTopology,
 		SelectedNode:   0,
 		SelectedRoute:  0,
@@ -178,6 +191,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case "d":
 			m.runDoctor()
+
+		case "g":
+			m.openGitModal()
+
+		case "u":
+			m.openUpdateModal()
 
 		case "b":
 			m.openBootstrapModal()
@@ -709,6 +728,17 @@ func (m *Model) submitCurrentModal() {
 			}
 		}
 		m.Modal = ModalState{Type: ModalNone}
+
+	case ModalUpdate:
+		if m.Modal.HasUpdate && !m.Modal.IsUpdating {
+			m.Modal.IsUpdating = true
+			m.Modal.UpdateStatus = fmt.Sprintf("⏳ Скачивание и запуск скрипта обновления версии %s...", m.Modal.UpdateVersion)
+			downloadURL := m.Modal.DownloadURL
+			if err := updater.PerformUpdate(downloadURL); err != nil {
+				m.Modal.IsUpdating = false
+				m.Modal.UpdateStatus = fmt.Sprintf("❌ Ошибка обновления: %v", err)
+			}
+		}
 	}
 }
 
@@ -1297,6 +1327,30 @@ func (m *Model) openGitModal() {
 			{Label: "Сообщение коммита", Value: "update mesh configuration"},
 		},
 	}
+}
+
+func (m *Model) openUpdateModal() {
+	m.Modal = ModalState{
+		Type:         ModalUpdate,
+		UpdateStatus: fmt.Sprintf("🔍 Проверка обновлений (текущая версия: %s)...", m.Version),
+	}
+
+	hasUpdate, latestVer, downloadURL, err := updater.CheckForUpdate(m.Version)
+	if err != nil {
+		m.Modal.UpdateStatus = fmt.Sprintf("❌ Ошибка проверки обновлений: %v", err)
+		return
+	}
+
+	if !hasUpdate {
+		m.Modal.UpdateStatus = fmt.Sprintf("✔ У вас установлена самая актуальная версия программы (%s).", m.Version)
+		m.Modal.HasUpdate = false
+		return
+	}
+
+	m.Modal.HasUpdate = true
+	m.Modal.UpdateVersion = latestVer
+	m.Modal.DownloadURL = downloadURL
+	m.Modal.UpdateStatus = fmt.Sprintf("🆕 Найдена новая версия: %s (текущая: %s)\n\nНажмите [Enter] для установки обновления.", latestVer, m.Version)
 }
 
 func (m Model) View() string {

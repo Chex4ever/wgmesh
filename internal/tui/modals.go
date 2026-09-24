@@ -41,6 +41,8 @@ func renderModalOverlay(m Model) string {
 		body = renderCapModal(m.Modal)
 	case ModalGit:
 		body = renderGitModal(m.Modal)
+	case ModalUpdate:
+		body = renderUpdateModal(m.Modal)
 	default:
 		return ""
 	}
@@ -223,6 +225,29 @@ func renderGitModal(state ModalState) string {
 	return sb.String()
 }
 
+func renderUpdateModal(state ModalState) string {
+	var sb strings.Builder
+	sb.WriteString(titleStyle.Render("🔄 Авто-обновление wgmesh") + "\n\n")
+
+	if state.UpdateStatus != "" {
+		sb.WriteString(state.UpdateStatus + "\n\n")
+	}
+
+	if state.IsUpdating {
+		sb.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("214")).Bold(true).Render("⏳ Скачивание и запуск скрипта обновления...") + "\n\n")
+	} else if state.HasUpdate {
+		sb.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("86")).Render(
+			"[Enter] Установить обновление  |  [Esc] Отмена",
+		))
+	} else {
+		sb.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("243")).Render(
+			"[Esc] Закрыть",
+		))
+	}
+
+	return sb.String()
+}
+
 func renderHelpContent() string {
 	return titleStyle.Render("═══ Справка по клавишам wgmesh TUI ═══") + `
 
@@ -246,8 +271,10 @@ func renderHelpContent() string {
   [d]                   — 🏥 wgmesh Doctor (Полная диагностика сети)
   [x]                   — 📦 Экспорт профиля / Генерация ASCII QR-кода
   [g]                   — 🐙 Git status, Commit & Push в репозиторий
+  [u]                   — 🔄 Проверить и установить авто-обновление
   [s]                   — 💾 Сохранить изменения в mesh.yaml
   [?]                   — ❓ Справка по горячим клавишам
   [q] / [Ctrl+C]        — 🚪 Выход из TUI
 `
+
 }

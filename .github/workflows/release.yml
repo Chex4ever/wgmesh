@@ -1,0 +1,45 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build & Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.20'
+          cache: true
+
+      - name: Extract tag name
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Build Windows Executable
+        env:
+          GOOS: windows
+          GOARCH: amd64
+        run: |
+          go build -ldflags "-s -w -X github.com/meshctl/meshctl/internal/cli.Version=${{ steps.get_version.outputs.VERSION }}" -o wgmesh.exe ./cmd/wgmesh
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: wgmesh.exe
+          name: Release ${{ steps.get_version.outputs.VERSION }}
+          body: |
+            ## wgmesh ${{ steps.get_version.outputs.VERSION }}
+            Автоматическая сборка бинарного файла wgmesh.exe для Windows.
+          draft: false
+          prerelease: false

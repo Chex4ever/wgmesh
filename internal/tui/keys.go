@@ -15,6 +15,7 @@ type KeyMap struct {
 	Save      key.Binding
 	Quit      key.Binding
 	Help      key.Binding
+	Update    key.Binding
 }
 
 var Keys = KeyMap{
@@ -65,5 +66,9 @@ var Keys = KeyMap{
 	Help: key.NewBinding(
 		key.WithKeys("?"),
 		key.WithHelp("?", "справка"),
+	),
+	Update: key.NewBinding(
+		key.WithKeys("u"),
+		key.WithHelp("u", "обновление"),
 	),
 }
