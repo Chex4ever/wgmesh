@@ -40,7 +40,8 @@ func RenderClientsPane(m *config.Mesh, selectedIdx, hoverIdx int, isPressed bool
 				st = st.Copy().Underline(true)
 			}
 		}
-		sb.WriteString(st.Render(fmt.Sprintf("%s%s", prefix, line)) + "\n")
+		sb.WriteString(st.Render(fmt.Sprintf("%s%s", prefix, line)))
+		sb.WriteString("\n")
 	}
 
 	addBtnIdx := clientCount
@@ -58,7 +59,8 @@ func RenderClientsPane(m *config.Mesh, selectedIdx, hoverIdx int, isPressed bool
 			addSt = addSt.Copy().Underline(true)
 		}
 	}
-	sb.WriteString(addSt.Render(fmt.Sprintf("%s%s", addPrefix, addBtnText)) + "\n")
+	sb.WriteString(addSt.Render(fmt.Sprintf("%s%s", addPrefix, addBtnText)))
+	sb.WriteString("\n")
 
 	style := paneStyle.Width(width)
 	if isActive {

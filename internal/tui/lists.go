@@ -12,7 +12,8 @@ import (
 // RenderListsPane отображает список доменов/IP для селективного туннелирования и кнопку добавления.
 func RenderListsPane(m *config.Mesh, selectedIdx, hoverIdx int, isPressed bool, isActive bool, width, height int) string {
 	var sb strings.Builder
-	sb.WriteString(i18n.T("pane_lists") + "\n\n")
+	sb.WriteString(i18n.T("pane_lists"))
+	sb.WriteString("\n\n")
 
 	listCount := len(m.Lists)
 	for i, l := range m.Lists {

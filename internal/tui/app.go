@@ -163,6 +163,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "down":
 			m.moveSelection(1)
 
+		case "left":
+			if m.ActivePane == PaneEditor {
+				m.cycleSelectedHopNode(-1)
+			}
+
+		case "right":
+			if m.ActivePane == PaneEditor {
+				m.cycleSelectedHopNode(1)
+			}
+
 		case "+", "=":
 			m.addHopToSelectedRoute()
 
@@ -269,6 +279,19 @@ func (m *Model) handleModalKey(key string) (Model, tea.Cmd) {
 		}
 
 	case "enter":
+		if m.Modal.Type == ModalAddRoute || m.Modal.Type == ModalEditRoute {
+			if m.Modal.ActiveField < len(m.Modal.Fields) {
+				lbl := m.Modal.Fields[m.Modal.ActiveField].Label
+				if strings.Contains(lbl, "[+] Добавить хоп") {
+					m.addHopFieldToRouteModal()
+					return *m, nil
+				}
+				if strings.Contains(lbl, "[-] Удалить") {
+					m.removeHopFieldFromRouteModal()
+					return *m, nil
+				}
+			}
+		}
 		cmd := m.submitCurrentModal()
 		return *m, cmd
 
@@ -426,72 +449,65 @@ func (m *Model) submitFormModal() {
 		}
 		m.Modal = ModalState{Type: ModalNone}
 
-	case ModalAddRoute:
+	case ModalAddRoute, ModalEditRoute:
 		name := m.getFieldValue("Имя маршрута")
-		pathStr := m.getFieldValue("Путь (через запятую)")
-		exit := m.getFieldValue("Выходной сервер (Exit)")
+		if name == "" {
+			m.LogMsg = "[!] Ошибка: имя маршрута не может быть пустым!"
+			return
+		}
+		excludeIdx := -1
+		if m.Modal.Type == ModalEditRoute {
+			excludeIdx = m.SelectedRoute
+		}
+		if m.isRouteNameTaken(name, excludeIdx) {
+			m.LogMsg = fmt.Sprintf("[!] Ошибка: Имя маршрута %q уже занято!", name)
+			return
+		}
+
+		var hops []string
+		hops = append(hops, config.ClientHop)
+
+		for _, f := range m.Modal.Fields {
+			if strings.HasPrefix(f.Label, "Узел ") {
+				if len(f.Options) > 0 && f.OptionIdx >= 0 && f.OptionIdx < len(f.Options) {
+					hops = append(hops, f.Options[f.OptionIdx])
+				}
+			}
+		}
+
+		if len(hops) == 1 {
+			m.LogMsg = "[!] Ошибка: выберите хотя бы один узел в маршруте!"
+			return
+		}
+
+		exit := m.getFieldValue("Выходной узел")
+		if exit == "" {
+			exit = hops[len(hops)-1]
+		}
 		protStr := strings.ToLower(m.getFieldValue("Защита маршрута"))
-		if name != "" && pathStr != "" {
-			if m.isRouteNameTaken(name, -1) {
-				m.LogMsg = fmt.Sprintf("[!] Ошибка: Имя маршрута %q уже занято!", name)
-				return
-			}
-			hops := splitTrimTUI(pathStr)
-			if len(hops) > 0 && hops[0] != config.ClientHop {
-				hops = append([]string{config.ClientHop}, hops...)
-			}
-			if exit == "" && len(hops) > 1 {
-				exit = hops[len(hops)-1]
-			}
+		isProt := protStr == "да (protected: true)" || protStr == "y" || protStr == "yes"
+
+		if m.Modal.Type == ModalAddRoute {
 			r := config.Route{
 				Name:      name,
 				Path:      hops,
 				ExitNode:  exit,
-				Protected: protStr == "да (protected: true)" || protStr == "y" || protStr == "yes",
+				Protected: isProt,
 			}
 			m.Mesh.Routes = append(m.Mesh.Routes, r)
-			m.IsDirty = true
-			_ = config.Save(m.ConfigPath, m.Mesh)
 			m.LogMsg = fmt.Sprintf("[OK] Маршрут %q создан", name)
+		} else {
+			if m.SelectedRoute >= 0 && m.SelectedRoute < len(m.Mesh.Routes) {
+				oldRoute := &m.Mesh.Routes[m.SelectedRoute]
+				oldRoute.Name = name
+				oldRoute.Path = hops
+				oldRoute.ExitNode = exit
+				oldRoute.Protected = isProt
+				m.LogMsg = fmt.Sprintf("[OK] Настройки маршрута %q сохранены!", name)
+			}
 		}
-		m.Modal = ModalState{Type: ModalNone}
-
-	case ModalEditRoute:
-		if m.SelectedRoute < 0 || m.SelectedRoute >= len(m.Mesh.Routes) {
-			m.Modal = ModalState{Type: ModalNone}
-			return
-		}
-		oldRoute := &m.Mesh.Routes[m.SelectedRoute]
-		newName := m.getFieldValue("Имя маршрута")
-		pathStr := m.getFieldValue("Путь (через запятую)")
-		exit := m.getFieldValue("Выходной сервер (Exit)")
-		protStr := strings.ToLower(m.getFieldValue("Защита маршрута"))
-
-		if newName == "" || pathStr == "" {
-			m.LogMsg = "[!] Ошибка: имя и путь маршрута не могут быть пустыми!"
-			return
-		}
-		if m.isRouteNameTaken(newName, m.SelectedRoute) {
-			m.LogMsg = fmt.Sprintf("[!] Ошибка: Имя маршрута %q уже занято!", newName)
-			return
-		}
-
-		hops := splitTrimTUI(pathStr)
-		if len(hops) > 0 && hops[0] != config.ClientHop {
-			hops = append([]string{config.ClientHop}, hops...)
-		}
-		if exit == "" && len(hops) > 1 {
-			exit = hops[len(hops)-1]
-		}
-
-		oldRoute.Name = newName
-		oldRoute.Path = hops
-		oldRoute.ExitNode = exit
-		oldRoute.Protected = protStr == "да (protected: true)" || protStr == "y" || protStr == "yes"
-
 		m.IsDirty = true
 		_ = config.Save(m.ConfigPath, m.Mesh)
-		m.LogMsg = fmt.Sprintf("[OK] Настройки маршрута %q сохранены!", newName)
 		m.Modal = ModalState{Type: ModalNone}
 
 	case ModalAddClient:
