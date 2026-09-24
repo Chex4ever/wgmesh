@@ -15,9 +15,9 @@ var cfgPath string
 // Execute — точка входа CLI.
 func Execute() {
 	root := &cobra.Command{
-		Use:   "meshctl",
-		Short: "meshctl — менеджер WireGuard mesh-сетей (multihop exit-маршруты)",
-		Long: `meshctl управляет одноранговой mesh-сетью из WireGuard-нод
+		Use:   "wgmesh",
+		Short: "wgmesh — менеджер WireGuard mesh-сетей (multihop exit-маршруты)",
+		Long: `wgmesh управляет одноранговой mesh-сетью из WireGuard-нод
 (Linux / Mikrotik / OpenWRT): YAML-конфиги в Git, маршруты через
 несколько хопов, один бинарник без центрального сервера.
 
@@ -56,7 +56,7 @@ func versionCmd() *cobra.Command {
 		Use:   "version",
 		Short: "Показать версию",
 		Run: func(cmd *cobra.Command, args []string) {
-			cmd.Printf("meshctl %s\n", Version)
+			cmd.Printf("wgmesh %s\n", Version)
 		},
 	}
 }

@@ -1,4 +1,4 @@
-# meshctl (wgmesh)
+# wgmesh
 
 CLI/TUI-менеджер одноранговых (peer-to-peer) WireGuard & AmneziaWG mesh-сетей с multihop exit-маршрутами, селективным туннелированием по доменам (Split Tunneling) и мульти-клиентской маршрутизацией.
 
@@ -111,26 +111,26 @@ routes:
 
 ```bash
 # Инициализация нового проекта
-meshctl init --name "My Mesh"
+wgmesh init --name "My Mesh"
 
 # Добавление нод
-meshctl node add kz-server --type linux --host 109.248.198.55 --user root
-meshctl node add de-server --type linux --host 194.87.71.7 --user root
-meshctl node add home-router --type mikrotik --host 192.168.1.1 --user admin
+wgmesh node add kz-server --type linux --host 109.248.198.55 --user root
+wgmesh node add de-server --type linux --host 194.87.71.7 --user root
+wgmesh node add home-router --type mikrotik --host 192.168.1.1 --user admin
 
 # Создание маршрута
-meshctl route add via-kz-de --path client,kz-server,de-server --exit de-server
+wgmesh route add via-kz-de --path client,kz-server,de-server --exit de-server
 
 # Проверка плана без изменений
-meshctl apply --dry-run
+wgmesh apply --dry-run
 
 # Настройка нод по SSH
-meshctl apply
+wgmesh apply
 
 # Экспорт конфигов
-meshctl client-config via-kz-de --qr                           # Стандартный WG + QR
-meshctl export --client alice-phone --format sing-box -o alice.json # Sing-box с доменными правилами
-meshctl export --client alice-phone --format uri                    # 1-click URI ссылка
+wgmesh client-config via-kz-de --qr                           # Стандартный WG + QR
+wgmesh export --client alice-phone --format sing-box -o alice.json # Sing-box с доменными правилами
+wgmesh export --client alice-phone --format uri                    # 1-click URI ссылка
 ```
 
 ---
@@ -140,7 +140,7 @@ meshctl export --client alice-phone --format uri                    # 1-click UR
 Запуск консольного интерфейса:
 
 ```bash
-meshctl tui
+wgmesh tui
 ```
 
 В TUI доступны:
@@ -155,15 +155,15 @@ meshctl tui
 ## 🛠️ Сборка и установка
 
 ```bash
-git clone https://github.com/meshctl/meshctl
-cd meshctl
+git clone https://github.com/Chex4ever/wgmesh
+cd wgmesh
 go build -trimpath -ldflags "-s -w -X github.com/meshctl/meshctl/internal/cli.Version=$(git describe --tags --always)" \
-  -o meshctl ./cmd/meshctl
+  -o wgmesh ./cmd/wgmesh
 
 # Кросс-компиляция:
-GOOS=linux GOARCH=amd64 go build -o dist/meshctl-linux-amd64 ./cmd/meshctl
-GOOS=linux GOARCH=arm64 go build -o dist/meshctl-linux-arm64 ./cmd/meshctl
-GOOS=darwin GOARCH=arm64 go build -o dist/meshctl-darwin-arm64 ./cmd/meshctl
+GOOS=linux GOARCH=amd64 go build -o dist/wgmesh-linux-amd64 ./cmd/wgmesh
+GOOS=linux GOARCH=arm64 go build -o dist/wgmesh-linux-arm64 ./cmd/wgmesh
+GOOS=darwin GOARCH=arm64 go build -o dist/wgmesh-darwin-arm64 ./cmd/wgmesh
 ```
 
 ---
@@ -171,7 +171,7 @@ GOOS=darwin GOARCH=arm64 go build -o dist/meshctl-darwin-arm64 ./cmd/meshctl
 ## 📁 Структура репозитория
 
 ```
-cmd/meshctl/        Точка входа
+cmd/wgmesh/         Точка входа
 internal/cli/       Команды Cobra (init, node, route, apply, client-config, export, git)
 internal/config/    YAML-типы (Mesh, Node, Route, Client, DomainList, Obfuscation)
 internal/tui/       Интерфейс Bubble Tea (топология, редактор, монитор)
