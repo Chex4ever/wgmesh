@@ -18,7 +18,7 @@ func runTUICmd(cmd *cobra.Command, args []string) error {
 	}
 
 	model := tui.NewModel(m, cfgPath)
-	p := tea.NewProgram(model, tea.WithAltScreen())
+	p := tea.NewProgram(model, tea.WithAltScreen(), tea.WithMouseCellMotion())
 
 	if _, err := p.Run(); err != nil {
 		return fmt.Errorf("ошибка TUI: %w", err)

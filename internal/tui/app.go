@@ -126,6 +126,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.Width = msg.Width
 		m.Height = msg.Height
 
+	case tea.MouseMsg:
+		return m.handleMouseMsg(msg)
+
 	case tea.KeyMsg:
 		rawKey := msg.String()
 
