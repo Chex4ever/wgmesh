@@ -30,11 +30,11 @@ func Save(path string, m *Mesh) error {
 	if err != nil {
 		return fmt.Errorf("не удалось сериализовать конфиг: %w", err)
 	}
-	header := []byte("# Конфигурация mesh-сети (meshctl). Версионируется в Git.\n")
+	header := []byte("# Конфигурация mesh-сети (wgmesh). Версионируется в Git.\n")
 	data = append(header, data...)
 
 	dir := filepath.Dir(path)
-	tmp, err := os.CreateTemp(dir, ".meshctl-*.yaml")
+	tmp, err := os.CreateTemp(dir, ".wgmesh-*.yaml")
 	if err != nil {
 		return err
 	}
@@ -59,7 +59,7 @@ func Exists(path string) bool {
 	return err == nil
 }
 
-// DefaultMesh — дефолтный конфиг для `meshctl init`.
+// DefaultMesh — дефолтный конфиг для `wgmesh init`.
 func DefaultMesh() *Mesh {
 	return &Mesh{
 		Name:     "My Mesh Network",
@@ -69,3 +69,4 @@ func DefaultMesh() *Mesh {
 		Routes:   []Route{},
 	}
 }
+

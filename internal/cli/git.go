@@ -26,14 +26,14 @@ func gitInitCmd() *cobra.Command {
 			if err := runGit("init"); err != nil {
 				return err
 			}
-			gitignore := "*.private.yaml\nknown_hosts\n.meshctl-*.yaml\n"
+			gitignore := "*.private.yaml\nknown_hosts\n.wgmesh-*.yaml\n"
 			if err := os.WriteFile(".gitignore", []byte(gitignore), 0o644); err != nil {
 				return err
 			}
 			if err := runGit("add", "mesh.yaml", ".gitignore"); err != nil {
 				return err
 			}
-			if err := runGit("commit", "-m", "initial meshctl config"); err != nil {
+			if err := runGit("commit", "-m", "initial wgmesh config"); err != nil {
 				return err
 			}
 			fmt.Println("✔ Git репозиторий инициализирован, секреты добавлены в .gitignore")
@@ -59,7 +59,7 @@ func gitPushCmd() *cobra.Command {
 		Short: "Отправить изменения в удалённый репозиторий (git push)",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if msg == "" {
-				msg = "update meshctl config"
+				msg = "update wgmesh config"
 			}
 			runGit("add", "mesh.yaml")
 			runGit("commit", "-m", msg)
@@ -96,3 +96,4 @@ func runGit(args ...string) error {
 	c.Stderr = os.Stderr
 	return c.Run()
 }
+

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/meshctl/meshctl/internal/config"
+	"github.com/wgmesh/wgmesh/internal/config"
 )
 
 // OpenWRtDriver реализует провижининг роутеров OpenWRT через SSH и UCI.
@@ -120,3 +120,4 @@ func (d *OpenWRtDriver) GetStatus(node *config.Node) (string, error) {
 	out, err := r.run("wg show || ubus call network.interface.mesh_wg status")
 	return out, err
 }
+

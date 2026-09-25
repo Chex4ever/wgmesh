@@ -16,13 +16,13 @@ import (
 	"github.com/skip2/go-qrcode"
 	"golang.org/x/crypto/ssh"
 
-	"github.com/meshctl/meshctl/internal/config"
-	"github.com/meshctl/meshctl/internal/drivers"
-	"github.com/meshctl/meshctl/internal/export"
-	"github.com/meshctl/meshctl/internal/i18n"
-	"github.com/meshctl/meshctl/internal/mesh"
-	"github.com/meshctl/meshctl/internal/updater"
-	"github.com/meshctl/meshctl/internal/wg"
+	"github.com/wgmesh/wgmesh/internal/config"
+	"github.com/wgmesh/wgmesh/internal/drivers"
+	"github.com/wgmesh/wgmesh/internal/export"
+	"github.com/wgmesh/wgmesh/internal/i18n"
+	"github.com/wgmesh/wgmesh/internal/mesh"
+	"github.com/wgmesh/wgmesh/internal/updater"
+	"github.com/wgmesh/wgmesh/internal/wg"
 )
 
 type checkUpdateMsg struct {
@@ -112,7 +112,7 @@ func (m *Model) runApply() {
 	}
 }
 
-func (m *Model) runDoctor() {
+func (m *Model) runDoctor() tea.Cmd {
 	var lines []string
 	hasFail := false
 	hasWarn := false
@@ -157,16 +157,16 @@ func (m *Model) runDoctor() {
 		status = "YELLOW"
 	}
 
-	m.Modal = ModalState{
+	return m.openModal(ModalState{
 		Type:         ModalDoctor,
 		DoctorOutput: lines,
 		DoctorStatus: status,
-	}
+	})
 }
 
-func (m *Model) handleExportFormat(fmtKey string) {
+func (m *Model) handleExportFormat(fmtKey string) tea.Cmd {
 	if len(m.Mesh.Routes) == 0 || m.SelectedRoute >= len(m.Mesh.Routes) {
-		return
+		return nil
 	}
 	r := &m.Mesh.Routes[m.SelectedRoute]
 	var c *config.Client
@@ -191,12 +191,12 @@ func (m *Model) handleExportFormat(fmtKey string) {
 	exp, err := export.Get(fmtName)
 	if err != nil {
 		m.LogMsg = fmt.Sprintf("Ошибка экспорта: %v", err)
-		return
+		return nil
 	}
 	data, err := exp.Render(m.Mesh, r, c)
 	if err != nil {
 		m.LogMsg = fmt.Sprintf("Ошибка рендеринга профиля: %v", err)
-		return
+		return nil
 	}
 
 	qrStr := ""
@@ -207,23 +207,23 @@ func (m *Model) handleExportFormat(fmtKey string) {
 		}
 	}
 
-	m.Modal = ModalState{
+	return m.openModal(ModalState{
 		Type:       ModalExport,
 		ExportData: string(data),
 		ShowQR:     showQR,
 		QRString:   qrStr,
-	}
+	})
 }
 
-func (m *Model) openGitModal() {
+func (m *Model) openGitModal() tea.Cmd {
 	out, _ := exec.Command("git", "status", "-s").CombinedOutput()
-	m.Modal = ModalState{
+	return m.openModal(ModalState{
 		Type:      ModalGit,
 		GitStatus: string(out),
 		Fields: []FormField{
 			{Label: "Сообщение коммита", Value: "update mesh configuration"},
 		},
-	}
+	})
 }
 
 func ensureDefaultSSHKeyTUI() (string, string, error) {
@@ -326,3 +326,4 @@ func expandHomeTUI(p string) string {
 	}
 	return p
 }
+

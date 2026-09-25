@@ -7,7 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/meshctl/meshctl/internal/mesh"
+	"github.com/wgmesh/wgmesh/internal/mesh"
 )
 
 func planCmd() *cobra.Command {
@@ -66,3 +66,4 @@ func planCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&jsonOut, "json", false, "вывод в формате JSON")
 	return cmd
 }
+

@@ -11,8 +11,8 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
-	"github.com/meshctl/meshctl/internal/config"
-	"github.com/meshctl/meshctl/internal/wg"
+	"github.com/wgmesh/wgmesh/internal/config"
+	"github.com/wgmesh/wgmesh/internal/wg"
 )
 
 // sshRunner — минимальная обёртка над SSH-сессией.
@@ -73,7 +73,7 @@ func (r *sshRunner) run(cmd string) (string, error) {
 
 // write uploads content to a remote path via heredoc (0600).
 func (r *sshRunner) write(path, content string) error {
-	cmd := fmt.Sprintf("umask 077; cat > %s <<'MESHCTL_EOF'\n%s\nMESHCTL_EOF", path, content)
+	cmd := fmt.Sprintf("umask 077; cat > %s <<'wgmesh_EOF'\n%s\nwgmesh_EOF", path, content)
 	_, err := r.run(cmd)
 	return err
 }
@@ -128,7 +128,7 @@ func (d *LinuxDriver) ApplySpec(spec *NodeApplySpec) error {
 
 	// 3. forwarding & sysctl persistence
 	if spec.Forward || spec.NAT {
-		sysctlCmd := "mkdir -p /etc/sysctl.d && echo 'net.ipv4.ip_forward=1' > /etc/sysctl.d/99-meshctl.conf && sysctl -p /etc/sysctl.d/99-meshctl.conf || sysctl -w net.ipv4.ip_forward=1"
+		sysctlCmd := "mkdir -p /etc/sysctl.d && echo 'net.ipv4.ip_forward=1' > /etc/sysctl.d/99-wgmesh.conf && sysctl -p /etc/sysctl.d/99-wgmesh.conf || sysctl -w net.ipv4.ip_forward=1"
 		if out, err := r.run(sysctlCmd); err != nil {
 			return fmt.Errorf("drivers/linux: ip_forward: %w\n%s", err, out)
 		}
@@ -196,3 +196,4 @@ func installWGCmd() string {
 || (command -v apk && apk add --no-cache wireguard-tools) \
 || (command -v dnf && dnf install -y wireguard-tools)`
 }
+

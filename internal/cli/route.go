@@ -8,10 +8,10 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/meshctl/meshctl/internal/config"
+	"github.com/wgmesh/wgmesh/internal/config"
 )
 
-// routeCmd — `meshctl route ...`: add / edit / list / remove.
+// routeCmd — `wgmesh route ...`: add / edit / list / remove.
 func routeCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "route",
@@ -217,3 +217,4 @@ func nodeNames(m *config.Mesh) []string {
 	}
 	return out
 }
+

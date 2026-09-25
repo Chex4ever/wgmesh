@@ -14,7 +14,7 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh"
 
-	"github.com/meshctl/meshctl/internal/config"
+	"github.com/wgmesh/wgmesh/internal/config"
 )
 
 const defaultSSHKeyRelPath = "~/.config/wgmesh/keys/id_ed25519"
@@ -221,3 +221,4 @@ func installRemoteSSHKey(host string, port int, user, password, keyPath, pubKeyS
 
 	return nil
 }
+

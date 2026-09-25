@@ -7,16 +7,16 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/meshctl/meshctl/internal/config"
-	"github.com/meshctl/meshctl/internal/drivers"
-	"github.com/meshctl/meshctl/internal/mesh"
-	"github.com/meshctl/meshctl/internal/wg"
+	"github.com/wgmesh/wgmesh/internal/config"
+	"github.com/wgmesh/wgmesh/internal/drivers"
+	"github.com/wgmesh/wgmesh/internal/mesh"
+	"github.com/wgmesh/wgmesh/internal/wg"
 )
 
 // validateMesh — общая точка валидации конфига.
 func validateMesh(m *config.Mesh) error { return mesh.Validate(m) }
 
-// applyCmd — `meshctl apply`: генерирует ключи/адреса, строит конфигы WG
+// applyCmd — `wgmesh apply`: генерирует ключи/адреса, строит конфигы WG
 // и применяет их к нодам через драйверы. Флаг --dry-plan печатает план без SSH.
 func applyCmd() *cobra.Command {
 	var (
@@ -168,3 +168,4 @@ func routeIndex(m *config.Mesh, name string) int {
 	}
 	return 0
 }
+

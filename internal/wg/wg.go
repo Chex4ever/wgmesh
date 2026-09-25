@@ -111,7 +111,7 @@ type ClientConfig struct {
 // RenderClient generates a standard wg-quick client config.
 func RenderClient(c *ClientConfig) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "# meshctl: клиентский конфиг маршрута %s\n", c.Name)
+	fmt.Fprintf(&b, "# wgmesh: клиентский конфиг маршрута %s\n", c.Name)
 	b.WriteString("[Interface]\n")
 	fmt.Fprintf(&b, "PrivateKey = %s\n", c.PrivateKey)
 	fmt.Fprintf(&b, "Address = %s\n", c.Address)
@@ -142,7 +142,7 @@ type NodeConfig struct {
 // RenderNode генерирует wg-quick конфиг для ноды (server-side).
 func RenderNode(n *NodeConfig) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "# meshctl: конфиг ноды %s (сгенерирован автоматически)\n", n.Name)
+	fmt.Fprintf(&b, "# wgmesh: конфиг ноды %s (сгенерирован автоматически)\n", n.Name)
 	b.WriteString("[Interface]\n")
 	fmt.Fprintf(&b, "PrivateKey = %s\n", n.PrivateKey)
 	fmt.Fprintf(&b, "Address = %s\n", n.Address)
@@ -160,3 +160,4 @@ func RenderNode(n *NodeConfig) string {
 	}
 	return b.String()
 }
+

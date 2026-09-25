@@ -7,11 +7,11 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/meshctl/meshctl/internal/config"
-	"github.com/meshctl/meshctl/internal/drivers"
+	"github.com/wgmesh/wgmesh/internal/config"
+	"github.com/wgmesh/wgmesh/internal/drivers"
 )
 
-// nodeCmd — `meshctl node ...`: add / list / remove / teardown / capabilities.
+// nodeCmd — `wgmesh node ...`: add / list / remove / teardown / capabilities.
 func nodeCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "node",
@@ -241,3 +241,4 @@ func orDash(s string) string {
 	}
 	return s
 }
+

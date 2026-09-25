@@ -1,12 +1,10 @@
 package tui
 
 import (
-	"fmt"
-
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/meshctl/meshctl/internal/config"
-	"github.com/meshctl/meshctl/internal/i18n"
+	"github.com/wgmesh/wgmesh/internal/config"
+	"github.com/wgmesh/wgmesh/internal/i18n"
 )
 
 func (m *Model) handleMouseMsg(msg tea.MouseMsg) (Model, tea.Cmd) {
@@ -48,58 +46,30 @@ func (m *Model) handleMouseMsg(msg tea.MouseMsg) (Model, tea.Cmd) {
 
 	// 2. Если открыто модальное окно — обработка кликов внутри модалки
 	if m.Modal.Type != ModalNone {
+		if m.Modal.IsClosing {
+			return *m, nil
+		}
 		return m.handleModalMouseClick(x, y)
 	}
 
-	// 3. Вычисление геометрии экрана как в View()
-	totalWidth := m.Width - 4
-	if totalWidth < 40 {
-		totalWidth = 40
-	}
-
-	colWidth := (totalWidth - 4) / 2
-	if colWidth < 20 {
-		colWidth = 20
-	}
-
-	header := lipgloss.NewStyle().
-		Bold(true).
-		Foreground(lipgloss.Color("86")).
-		Render(fmt.Sprintf("=== Топология сети: %s (версия %s) ===", m.Mesh.Name, m.Version))
-
-	topView := RenderTopology(m.Mesh, m.SelectedRoute, totalWidth)
-	topBox := paneStyle.Width(totalWidth).Render(header + "\n\n" + topView)
-	topHeight := lipgloss.Height(topBox)
-
-	paneHeight := 6
-	nodesView := RenderNodesPane(m.Mesh, m.SelectedNode, -1, false, m.ActivePane == PaneNodes, colWidth, paneHeight)
-	routesView := RenderRoutesPane(m.Mesh, m.SelectedRoute, -1, false, m.ActivePane == PaneRoutes, colWidth, paneHeight)
-	clientsView := RenderClientsPane(m.Mesh, m.SelectedClient, -1, false, m.ActivePane == PaneClients, colWidth, paneHeight)
-	listsView := RenderListsPane(m.Mesh, m.SelectedList, -1, false, m.ActivePane == PaneLists, colWidth, paneHeight)
-	editorView := RenderEditorPane(m.Mesh, &m.Editor, -1, -1, false, m.ActivePane == PaneEditor, totalWidth)
-
-	middleUpper := lipgloss.JoinHorizontal(lipgloss.Top, nodesView, " ", routesView)
-	middleLower := lipgloss.JoinHorizontal(lipgloss.Top, clientsView, " ", listsView)
-
-	midUpperHeight := lipgloss.Height(middleUpper)
-	midLowerHeight := lipgloss.Height(middleLower)
-	editorHeight := lipgloss.Height(editorView)
-
-	nodesWidth := lipgloss.Width(nodesView)
+	// 3. Вычисление геометрии экрана
+	g := computeLayoutGeometry(*m)
 
 	// --- ОПРЕДЕЛЕНИЕ ПАНЕЛИ ПО Y КООРДИНАТЕ ---
 
 	// A. Верхняя панель (PaneTopology)
-	if y >= 0 && y < topHeight {
+	if y >= 0 && y < g.topHeight {
 		m.ActivePane = PaneTopology
 		yRel := y - 1
 		topoLine := yRel - 2
 		if len(m.Mesh.Routes) == 0 {
 			if topoLine >= 0 && topoLine <= 4 {
 				if topoLine == 1 {
-					m.openBootstrapModal()
+					cmd := m.openBootstrapModal()
+					return *m, cmd
 				} else if topoLine == 2 {
-					m.openAddRouteModal()
+					cmd := m.openAddRouteModal()
+					return *m, cmd
 				} else if topoLine == 3 {
 					m.LogMsg = "→ Запуск полного применения (Apply) по SSH…"
 					m.runApply()
@@ -118,15 +88,16 @@ func (m *Model) handleMouseMsg(msg tea.MouseMsg) (Model, tea.Cmd) {
 	}
 
 	// B. Средняя верхняя секция (Nodes & Routes)
-	if y >= topHeight && y < topHeight+midUpperHeight {
-		yRel := y - topHeight - 1
+	if y >= g.topHeight && y < g.topHeight+g.midUpperHeight {
+		yRel := y - g.topHeight - 1
 
-		if x < nodesWidth {
+		if x < g.nodesWidth {
 			nodeCount := len(m.Mesh.Nodes)
 			if yRel >= 2 && yRel < 2+nodeCount {
 				clickedIdx := yRel - 2
 				if m.ActivePane == PaneNodes && m.SelectedNode == clickedIdx {
-					m.openEditNodeModal()
+					cmd := m.openEditNodeModal()
+					return *m, cmd
 				} else {
 					m.ActivePane = PaneNodes
 					m.SelectedNode = clickedIdx
@@ -134,18 +105,21 @@ func (m *Model) handleMouseMsg(msg tea.MouseMsg) (Model, tea.Cmd) {
 			} else if yRel == 2+nodeCount {
 				m.ActivePane = PaneNodes
 				m.SelectedNode = nodeCount
-				m.openAddNodeModal()
+				cmd := m.openAddNodeModal()
+				return *m, cmd
 			} else if yRel == 3+nodeCount {
 				m.ActivePane = PaneNodes
 				m.SelectedNode = nodeCount + 1
-				m.openBootstrapModal()
+				cmd := m.openBootstrapModal()
+				return *m, cmd
 			}
 		} else {
 			routeCount := len(m.Mesh.Routes)
 			if yRel >= 2 && yRel < 2+routeCount {
 				clickedIdx := yRel - 2
 				if m.ActivePane == PaneRoutes && m.SelectedRoute == clickedIdx {
-					m.openEditRouteModal()
+					cmd := m.openEditRouteModal()
+					return *m, cmd
 				} else {
 					m.ActivePane = PaneRoutes
 					m.SelectedRoute = clickedIdx
@@ -154,22 +128,24 @@ func (m *Model) handleMouseMsg(msg tea.MouseMsg) (Model, tea.Cmd) {
 			} else if yRel == 2+routeCount {
 				m.ActivePane = PaneRoutes
 				m.SelectedRoute = routeCount
-				m.openAddRouteModal()
+				cmd := m.openAddRouteModal()
+				return *m, cmd
 			}
 		}
 		return *m, nil
 	}
 
 	// C. Средняя нижняя секция (Clients & Lists)
-	if y >= topHeight+midUpperHeight && y < topHeight+midUpperHeight+midLowerHeight {
-		yRel := y - (topHeight + midUpperHeight) - 1
+	if y >= g.topHeight+g.midUpperHeight && y < g.topHeight+g.midUpperHeight+g.midLowerHeight {
+		yRel := y - (g.topHeight + g.midUpperHeight) - 1
 
-		if x < nodesWidth {
+		if x < g.nodesWidth {
 			clientCount := len(m.Mesh.Clients)
 			if yRel >= 2 && yRel < 2+clientCount {
 				clickedIdx := yRel - 2
 				if m.ActivePane == PaneClients && m.SelectedClient == clickedIdx {
-					m.openEditClientModal()
+					cmd := m.openEditClientModal()
+					return *m, cmd
 				} else {
 					m.ActivePane = PaneClients
 					m.SelectedClient = clickedIdx
@@ -177,14 +153,16 @@ func (m *Model) handleMouseMsg(msg tea.MouseMsg) (Model, tea.Cmd) {
 			} else if yRel == 2+clientCount {
 				m.ActivePane = PaneClients
 				m.SelectedClient = clientCount
-				m.openAddClientModal()
+				cmd := m.openAddClientModal()
+				return *m, cmd
 			}
 		} else {
 			listCount := len(m.Mesh.Lists)
 			if yRel >= 2 && yRel < 2+listCount {
 				clickedIdx := yRel - 2
 				if m.ActivePane == PaneLists && m.SelectedList == clickedIdx {
-					m.openEditListModal()
+					cmd := m.openEditListModal()
+					return *m, cmd
 				} else {
 					m.ActivePane = PaneLists
 					m.SelectedList = clickedIdx
@@ -192,16 +170,17 @@ func (m *Model) handleMouseMsg(msg tea.MouseMsg) (Model, tea.Cmd) {
 			} else if yRel == 2+listCount {
 				m.ActivePane = PaneLists
 				m.SelectedList = listCount
-				m.openAddListModal()
+				cmd := m.openAddListModal()
+				return *m, cmd
 			}
 		}
 		return *m, nil
 	}
 
 	// D. Панель Редактора Маршрута (PaneEditor)
-	if y >= topHeight+midUpperHeight+midLowerHeight && y < topHeight+midUpperHeight+midLowerHeight+editorHeight {
+	if y >= g.topHeight+g.midUpperHeight+g.midLowerHeight && y < g.topHeight+g.midUpperHeight+g.midLowerHeight+g.editorHeight {
 		m.ActivePane = PaneEditor
-		yRel := y - (topHeight + midUpperHeight + midLowerHeight) - 1
+		yRel := y - (g.topHeight + g.midUpperHeight + g.midLowerHeight) - 1
 
 		if yRel >= 3 && yRel <= 5 {
 			if len(m.Mesh.Routes) > 0 && m.SelectedRoute < len(m.Mesh.Routes) {
@@ -220,23 +199,24 @@ func (m *Model) handleMouseMsg(msg tea.MouseMsg) (Model, tea.Cmd) {
 			} else if x >= 22 && x < 42 {
 				m.removeHopFromSelectedRoute()
 			} else if x >= 42 {
-				m.openEditRouteModal()
+				cmd := m.openEditRouteModal()
+				return *m, cmd
 			}
 		}
 		return *m, nil
 	}
 
-	// E. Нижняя статусный строка (Status Bar)
-	if y >= topHeight+midUpperHeight+midLowerHeight+editorHeight {
-		yRelBar := y - (topHeight + midUpperHeight + midLowerHeight + editorHeight)
-		m.handleStatusBarClick(x, yRelBar)
-		return *m, nil
+	// E. Нижняя статусная строка (Status Bar)
+	if y >= g.statusBarTop {
+		yRelBar := y - g.statusBarTop
+		cmd := m.handleStatusBarClick(x, yRelBar)
+		return *m, cmd
 	}
 
 	return *m, nil
 }
 
-func (m *Model) handleStatusBarClick(x, yRel int) {
+func (m *Model) handleStatusBarClick(x, yRel int) tea.Cmd {
 	if yRel == 0 {
 		if m.IsDirty {
 			if err := config.Save(m.ConfigPath, m.Mesh); err != nil {
@@ -246,7 +226,7 @@ func (m *Model) handleStatusBarClick(x, yRel int) {
 				m.LogMsg = i18n.T("log_saved", m.ConfigPath)
 			}
 		}
-		return
+		return nil
 	}
 
 	switch {
@@ -261,22 +241,23 @@ func (m *Model) handleStatusBarClick(x, yRel int) {
 		m.LogMsg = i18n.T("log_applying")
 		m.runApply()
 	case x > 21 && x <= 37: // [b] Bootstrap
-		m.openBootstrapModal()
+		return m.openBootstrapModal()
 	case x > 37 && x <= 50: // [d] Doctor
-		m.runDoctor()
+		return m.runDoctor()
 	case x > 50 && x <= 63: // [x] Export
 		if len(m.Mesh.Routes) > 0 && m.SelectedRoute < len(m.Mesh.Routes) {
-			m.handleExportFormat("w")
+			return m.handleExportFormat("w")
 		} else {
 			m.LogMsg = i18n.T("log_route_protected")
 		}
 	case x > 63 && x <= 73: // [g] Git
-		m.openGitModal()
+		return m.openGitModal()
 	case x > 73 && x <= 86: // [u] Update
-		m.openUpdateModal()
+		return m.openUpdateModal()
 	case x > 86 && x <= 97: // [?] Help
-		m.Modal = ModalState{Type: ModalHelp}
+		return m.openModal(ModalState{Type: ModalHelp})
 	}
+	return nil
 }
 
 func (m *Model) handleModalMouseClick(x, y int) (Model, tea.Cmd) {
@@ -297,14 +278,16 @@ func (m *Model) handleModalMouseClick(x, y int) (Model, tea.Cmd) {
 
 	switch m.Modal.Type {
 	case ModalHelp, ModalCapabilities:
-		m.Modal = ModalState{Type: ModalNone}
+		cmd := m.closeModal()
+		return *m, cmd
 
 	case ModalDoctor:
 		if yRel >= mHeight-3 {
 			if xRel < 25 {
 				m.runDoctor()
 			} else {
-				m.Modal = ModalState{Type: ModalNone}
+				cmd := m.closeModal()
+				return *m, cmd
 			}
 		}
 
@@ -321,7 +304,8 @@ func (m *Model) handleModalMouseClick(x, y int) (Model, tea.Cmd) {
 			} else if xRel >= 50 && xRel < 62 {
 				m.handleExportFormat("q")
 			} else {
-				m.Modal = ModalState{Type: ModalNone}
+				cmd := m.closeModal()
+				return *m, cmd
 			}
 		}
 
@@ -331,9 +315,11 @@ func (m *Model) handleModalMouseClick(x, y int) (Model, tea.Cmd) {
 				if m.Modal.OnConfirm != nil {
 					m.Modal.OnConfirm(m)
 				}
-				m.Modal = ModalState{Type: ModalNone}
+				cmd := m.closeModal()
+				return *m, cmd
 			} else {
-				m.Modal = ModalState{Type: ModalNone}
+				cmd := m.closeModal()
+				return *m, cmd
 			}
 		}
 
@@ -349,9 +335,11 @@ func (m *Model) handleModalMouseClick(x, y int) (Model, tea.Cmd) {
 				}
 			} else if yRel >= 2+len(m.Modal.Fields) {
 				if xRel < 40 {
-					m.submitCurrentModal()
+					cmd := m.submitCurrentModal()
+					return *m, cmd
 				} else {
-					m.Modal = ModalState{Type: ModalNone}
+					cmd := m.closeModal()
+					return *m, cmd
 				}
 			}
 		}
@@ -359,3 +347,4 @@ func (m *Model) handleModalMouseClick(x, y int) (Model, tea.Cmd) {
 
 	return *m, nil
 }
+

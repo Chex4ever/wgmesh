@@ -4,7 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/meshctl/meshctl/internal/config"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/wgmesh/wgmesh/internal/config"
 )
 
 func (m *Model) isRouteNameTaken(name string, excludeIdx int) bool {
@@ -98,13 +99,13 @@ func (m *Model) cycleSelectedHopNode(delta int) {
 	m.LogMsg = fmt.Sprintf("[OK] Узел хопа %d изменён на %s", hopIdx, nodeNames[newOpt])
 }
 
-func (m *Model) openAddRouteModal() {
+func (m *Model) openAddRouteModal() tea.Cmd {
 	if len(m.Mesh.Nodes) == 0 {
 		m.LogMsg = "[!] Для создания маршрута сначала добавьте хотя бы один узел (нажмите 'b' для Bootstrap или 'n')"
-		return
+		return nil
 	}
 	nodeNames := m.nodeNamesList()
-	m.Modal = ModalState{
+	return m.openModal(ModalState{
 		Type: ModalAddRoute,
 		Fields: []FormField{
 			{Label: "Имя маршрута", Value: m.nextDefaultRouteName()},
@@ -113,30 +114,29 @@ func (m *Model) openAddRouteModal() {
 			{Label: "Выходной узел (Exit)", Options: nodeNames, OptionIdx: 0, Value: nodeNames[0]},
 			{Label: "Защита маршрута **", Options: []string{"нет", "да (protected: true)"}, OptionIdx: 0, Value: "нет"},
 		},
-	}
+	})
 }
 
-func (m *Model) openEditRouteModal() {
+func (m *Model) openEditRouteModal() tea.Cmd {
 	if len(m.Mesh.Routes) == 0 || m.SelectedRoute < 0 || m.SelectedRoute >= len(m.Mesh.Routes) {
-		return
+		return nil
 	}
 	r := &m.Mesh.Routes[m.SelectedRoute]
 	if r.Protected && m.Modal.Type != ModalConfirm {
-		m.Modal = ModalState{
+		return m.openModal(ModalState{
 			Type:          ModalConfirm,
 			ConfirmPrompt: fmt.Sprintf("Маршрут %q помечен как защищённый (protected: true)! Вы действительно хотите его отредактировать?", r.Name),
 			OnConfirm: func(mod *Model) {
 				mod.showEditRouteForm()
 			},
-		}
-		return
+		})
 	}
-	m.showEditRouteForm()
+	return m.showEditRouteForm()
 }
 
-func (m *Model) showEditRouteForm() {
+func (m *Model) showEditRouteForm() tea.Cmd {
 	if len(m.Mesh.Routes) == 0 || m.SelectedRoute < 0 || m.SelectedRoute >= len(m.Mesh.Routes) {
-		return
+		return nil
 	}
 	r := &m.Mesh.Routes[m.SelectedRoute]
 	nodeNames := m.nodeNamesList()
@@ -186,10 +186,10 @@ func (m *Model) showEditRouteForm() {
 	fields = append(fields, FormField{Label: "Выходной узел (Exit)", Options: nodeNames, OptionIdx: exitOpt, Value: nodeNames[exitOpt]})
 	fields = append(fields, FormField{Label: "Защита маршрута **", Options: []string{"нет", "да (protected: true)"}, OptionIdx: protOpt, Value: []string{"нет", "да (protected: true)"}[protOpt]})
 
-	m.Modal = ModalState{
+	return m.openModal(ModalState{
 		Type:   ModalEditRoute,
 		Fields: fields,
-	}
+	})
 }
 
 func (m *Model) addHopFieldToRouteModal() {
@@ -324,3 +324,4 @@ func (m *Model) removeRouteByIdx(idx int) {
 		}
 	}
 }
+

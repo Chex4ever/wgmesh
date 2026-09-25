@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/meshctl/meshctl/internal/config"
+	"github.com/wgmesh/wgmesh/internal/config"
 )
 
 // MikrotikDriver реализует провижининг роутеров Mikrotik (RouterOS 7) по SSH.
@@ -39,7 +39,7 @@ func (d *MikrotikDriver) ApplySpec(spec *NodeApplySpec) error {
 
 	// 1. Создание/обновление WireGuard интерфейса
 	cmdIface := fmt.Sprintf(
-		":if ([:len [/interface wireguard find name=%s]] = 0) do={ /interface wireguard add name=%s listen-port=%d private-key=%q comment=\"meshctl:%s\" } else={ /interface wireguard set [find name=%s] listen-port=%d private-key=%q }",
+		":if ([:len [/interface wireguard find name=%s]] = 0) do={ /interface wireguard add name=%s listen-port=%d private-key=%q comment=\"wgmesh:%s\" } else={ /interface wireguard set [find name=%s] listen-port=%d private-key=%q }",
 		iface, iface, port, spec.Config.PrivateKey, d.node.Name, iface, port, spec.Config.PrivateKey,
 	)
 	if out, err := r.run(cmdIface); err != nil {
@@ -50,7 +50,7 @@ func (d *MikrotikDriver) ApplySpec(spec *NodeApplySpec) error {
 	for _, p := range spec.Config.Peers {
 		allowedStr := strings.Join(p.AllowedIPs, ",")
 		cmdPeer := fmt.Sprintf(
-			":if ([:len [/interface wireguard peers find public-key=%q interface=%s]] = 0) do={ /interface wireguard peers add interface=%s public-key=%q allowed-address=%q endpoint-address=%q endpoint-port=%d persistent-keepalive=%d comment=\"meshctl:peer\" } else={ /interface wireguard peers set [find public-key=%q interface=%s] allowed-address=%q endpoint-address=%q endpoint-port=%d persistent-keepalive=%d }",
+			":if ([:len [/interface wireguard peers find public-key=%q interface=%s]] = 0) do={ /interface wireguard peers add interface=%s public-key=%q allowed-address=%q endpoint-address=%q endpoint-port=%d persistent-keepalive=%d comment=\"wgmesh:peer\" } else={ /interface wireguard peers set [find public-key=%q interface=%s] allowed-address=%q endpoint-address=%q endpoint-port=%d persistent-keepalive=%d }",
 			p.PublicKey, iface, iface, p.PublicKey, allowedStr, p.EndpointHost(), p.EndpointPort(), p.PersistentKeepalive,
 			p.PublicKey, iface, allowedStr, p.EndpointHost(), p.EndpointPort(), p.PersistentKeepalive,
 		)
@@ -61,7 +61,7 @@ func (d *MikrotikDriver) ApplySpec(spec *NodeApplySpec) error {
 
 	// 3. Назначение IP адреса на интерфейс
 	cmdAddr := fmt.Sprintf(
-		":if ([:len [/ip address find interface=%s]] = 0) do={ /ip address add address=%q interface=%s comment=\"meshctl:%s\" }",
+		":if ([:len [/ip address find interface=%s]] = 0) do={ /ip address add address=%q interface=%s comment=\"wgmesh:%s\" }",
 		iface, spec.Config.Address, iface, d.node.Name,
 	)
 	if out, err := r.run(cmdAddr); err != nil {
@@ -72,13 +72,13 @@ func (d *MikrotikDriver) ApplySpec(spec *NodeApplySpec) error {
 	if spec.NAT {
 		wan := "ether1"
 		cmdNAT := fmt.Sprintf(
-			":if ([:len [/ip firewall nat find comment=\"meshctl-nat\"]] = 0) do={ /ip firewall nat add chain=srcnat out-interface=%s action=masquerade comment=\"meshctl-nat\" }",
+			":if ([:len [/ip firewall nat find comment=\"wgmesh-nat\"]] = 0) do={ /ip firewall nat add chain=srcnat out-interface=%s action=masquerade comment=\"wgmesh-nat\" }",
 			wan,
 		)
 		r.run(cmdNAT)
 
 		cmdFwd := fmt.Sprintf(
-			":if ([:len [/ip firewall filter find comment=\"meshctl-fwd\"]] = 0) do={ /ip firewall filter add chain=forward in-interface=%s action=accept comment=\"meshctl-fwd\" }",
+			":if ([:len [/ip firewall filter find comment=\"wgmesh-fwd\"]] = 0) do={ /ip firewall filter add chain=forward in-interface=%s action=accept comment=\"wgmesh-fwd\" }",
 			iface,
 		)
 		r.run(cmdFwd)
@@ -87,7 +87,7 @@ func (d *MikrotikDriver) ApplySpec(spec *NodeApplySpec) error {
 	return nil
 }
 
-// RemoveConfig удаляет конфигурацию meshctl с ноды Mikrotik.
+// RemoveConfig удаляет конфигурацию wgmesh с ноды Mikrotik.
 func (d *MikrotikDriver) RemoveConfig(node *config.Node) error {
 	r, err := dialSSH(node)
 	if err != nil {
@@ -121,3 +121,4 @@ func (d *MikrotikDriver) GetStatus(node *config.Node) (string, error) {
 
 	return fmt.Sprintf("=== Interface ===\n%s\n=== Peers ===\n%s", out1, out2), nil
 }
+

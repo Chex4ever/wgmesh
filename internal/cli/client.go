@@ -9,9 +9,9 @@ import (
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 
-	"github.com/meshctl/meshctl/internal/config"
-	"github.com/meshctl/meshctl/internal/mesh"
-	"github.com/meshctl/meshctl/internal/wg"
+	"github.com/wgmesh/wgmesh/internal/config"
+	"github.com/wgmesh/wgmesh/internal/mesh"
+	"github.com/wgmesh/wgmesh/internal/wg"
 )
 
 // clientState — кэш ключей клиентов в mesh.yaml (поле extension).
@@ -62,7 +62,7 @@ func clientConfigCmd() *cobra.Command {
 			}
 			first := m.NodeByName(hops[0])
 			if first.WireGuard.PublicKey == "" {
-				return fmt.Errorf("нода %q не инициализирована — сначала выполните `meshctl apply`", first.Name)
+				return fmt.Errorf("нода %q не инициализирована — сначала выполните `wgmesh apply`", first.Name)
 			}
 
 			// ключи клиента: из кэша или новые
@@ -196,3 +196,4 @@ func saveClientState(path string, m *config.Mesh, st *clientState) error {
 }
 
 var _ = rawMesh{} // резонанс структуры для будущих расширений
+

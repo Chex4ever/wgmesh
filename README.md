@@ -1,10 +1,14 @@
-# wgmesh
+# wgmesh — Warp Gateway Mesh
 
 CLI/TUI-менеджер одноранговых (peer-to-peer) WireGuard & AmneziaWG mesh-сетей с multihop exit-маршрутами, селективным туннелированием по доменам (Split Tunneling) и мульти-клиентской маршрутизацией.
 
 Один бинарник на Go, YAML-конфиги (версионируются в Git), управление роутерами и VPS по SSH, без центрального сервера (Zero-Server / Zero-Agent).
 
 Подробное описание подсистем, модели данных и механизмов маршрутизации — в документе [ARCHITECTURE.md](./ARCHITECTURE.md).
+
+> [!WARNING]
+> **Work in Progress (WIP)**  
+> Проект находится в стадии активной разработки и тестирования. Некоторые функции могут быть не до конца реализованы или изменяться в процессе работы. Использовать с осторожностью. Если у вас есть идеи или вы нашли баг — добро пожаловать в Issues и Pull Requests!
 
 ---
 
@@ -186,7 +190,7 @@ Invoke-WebRequest -Uri "https://github.com/Chex4ever/wgmesh/releases/latest/down
 ```bash
 git clone https://github.com/Chex4ever/wgmesh
 cd wgmesh
-go build -trimpath -ldflags "-s -w -X github.com/meshctl/meshctl/internal/cli.Version=$(git describe --tags --always)" \
+go build -trimpath -ldflags "-s -w -X github.com/wgmesh/wgmesh/internal/cli.Version=$(git describe --tags --always)" \
   -o wgmesh ./cmd/wgmesh
 
 # Кросс-компиляция:
@@ -214,6 +218,20 @@ scripts/            install.sh
 
 ---
 
+## 🛠️ Статус разработки (Roadmap)
+
+- [x] **Zero-Server SSH Bootstrap**: прямое управление нодами по SSH без агентов
+- [x] **Multihop Chaining & Split Tunneling**: кастомные цепочки и селективная маршрутизация доменов/IP
+- [x] **Поддержка платформ**: Linux (wg-quick, nftables), Mikrotik RouterOS 7, OpenWRT (UCI + fw4)
+- [x] **Экспорт конфигов**: WireGuard, AmneziaWG, Sing-box JSON, URI, QR-коды
+- [x] **Интерактивный TUI**: редактор топологии, роутов, нод и клиентов на Bubble Tea
+- [ ] **Расширенная автоматическая диагностика**: углубленный `wgmesh doctor` с проверкой MTU/RTT
+- [ ] **Поддержка дополнительных драйверов**: FreeBSD / OPNSense
+- [ ] **Расширенное покрытие автотестами в CI/CD**
+
+---
+
 ## 📜 Лицензия
 
 MIT — см. [LICENSE](./LICENSE).
+

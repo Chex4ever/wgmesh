@@ -4,13 +4,12 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/meshctl/meshctl/internal/config"
-	"github.com/meshctl/meshctl/internal/i18n"
+	"github.com/wgmesh/wgmesh/internal/config"
+	"github.com/wgmesh/wgmesh/internal/i18n"
 )
 
 var (
 	statusBarStyle = lipgloss.NewStyle().
-			Background(lipgloss.Color("236")).
 			Foreground(lipgloss.Color("252")).
 			Padding(0, 1)
 
@@ -74,3 +73,4 @@ func RenderStatusBar(m *config.Mesh, configPath string, isDirty bool, activePane
 
 	return statusBarStyle.Width(totalWidth).Render(fullBar)
 }
+

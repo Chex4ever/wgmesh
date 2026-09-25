@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/meshctl/meshctl/internal/config"
-	"github.com/meshctl/meshctl/internal/drivers"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/wgmesh/wgmesh/internal/config"
+	"github.com/wgmesh/wgmesh/internal/drivers"
 )
 
 func (m *Model) isNodeNameTaken(name string, excludeIdx int) bool {
@@ -61,8 +62,8 @@ func (m *Model) renameNode(oldName, newName string) {
 	}
 }
 
-func (m *Model) openBootstrapModal() {
-	m.Modal = ModalState{
+func (m *Model) openBootstrapModal() tea.Cmd {
+	return m.openModal(ModalState{
 		Type: ModalBootstrapNode,
 		Fields: []FormField{
 			{Label: "Имя ноды", Value: m.nextDefaultNodeName()},
@@ -72,11 +73,11 @@ func (m *Model) openBootstrapModal() {
 			{Label: "SSH Пользователь", Value: "root"},
 			{Label: "Защита от удаления **", Options: []string{"нет", "да (protected: true)"}, OptionIdx: 0, Value: "нет"},
 		},
-	}
+	})
 }
 
-func (m *Model) openAddNodeModal() {
-	m.Modal = ModalState{
+func (m *Model) openAddNodeModal() tea.Cmd {
+	return m.openModal(ModalState{
 		Type: ModalAddNode,
 		Fields: []FormField{
 			{Label: "Имя ноды", Value: m.nextDefaultNodeName()},
@@ -86,12 +87,12 @@ func (m *Model) openAddNodeModal() {
 			{Label: "SSH Пользователь", Value: "root"},
 			{Label: "Защита от удаления **", Options: []string{"нет", "да (protected: true)"}, OptionIdx: 0, Value: "нет"},
 		},
-	}
+	})
 }
 
-func (m *Model) openEditNodeModal() {
+func (m *Model) openEditNodeModal() tea.Cmd {
 	if len(m.Mesh.Nodes) == 0 || m.SelectedNode < 0 || m.SelectedNode >= len(m.Mesh.Nodes) {
-		return
+		return nil
 	}
 	node := &m.Mesh.Nodes[m.SelectedNode]
 	typeOpt := 0
@@ -106,7 +107,7 @@ func (m *Model) openEditNodeModal() {
 		protOpt = 1
 	}
 
-	m.Modal = ModalState{
+	return m.openModal(ModalState{
 		Type: ModalEditNode,
 		Fields: []FormField{
 			{Label: "Имя ноды", Value: node.Name},
@@ -116,7 +117,7 @@ func (m *Model) openEditNodeModal() {
 			{Label: "SSH Пользователь", Value: node.SSHUser},
 			{Label: "Защита от удаления **", Options: []string{"нет", "да (protected: true)"}, OptionIdx: protOpt, Value: []string{"нет", "да (protected: true)"}[protOpt]},
 		},
-	}
+	})
 }
 
 func (m *Model) removeNodeByIdx(idx int) {
@@ -150,13 +151,13 @@ func (m *Model) handleTeardownNode() {
 	}
 }
 
-func (m *Model) handleCapabilities() {
+func (m *Model) handleCapabilities() tea.Cmd {
 	if len(m.Mesh.Nodes) == 0 || m.SelectedNode >= len(m.Mesh.Nodes) {
-		return
+		return nil
 	}
 	node := &m.Mesh.Nodes[m.SelectedNode]
 	caps := drivers.Capabilities(node.Type)
-	m.Modal = ModalState{
+	return m.openModal(ModalState{
 		Type: ModalCapabilities,
 		CapText: fmt.Sprintf(
 			"Нода: %s (%s)\n\n"+
@@ -170,5 +171,6 @@ func (m *Model) handleCapabilities() {
 			caps.SupportsPSK, caps.SupportsKeepalive, caps.SupportsNAT,
 			caps.SupportsMultiRoute, caps.SupportsObfuscation, caps.NeedsPackageInstall,
 		),
-	}
+	})
 }
+

@@ -6,8 +6,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/meshctl/meshctl/internal/config"
-	"github.com/meshctl/meshctl/internal/drivers"
+	"github.com/wgmesh/wgmesh/internal/config"
+	"github.com/wgmesh/wgmesh/internal/drivers"
 )
 
 func statusCmd() *cobra.Command {
@@ -51,3 +51,4 @@ func statusCmd() *cobra.Command {
 		},
 	}
 }
+

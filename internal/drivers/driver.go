@@ -5,8 +5,8 @@ package drivers
 import (
 	"fmt"
 
-	"github.com/meshctl/meshctl/internal/config"
-	"github.com/meshctl/meshctl/internal/wg"
+	"github.com/wgmesh/wgmesh/internal/config"
+	"github.com/wgmesh/wgmesh/internal/wg"
 )
 
 // NodeApplySpec — всё, что драйверу нужно знать про ноду для применения конфига.
@@ -43,3 +43,4 @@ func New(node *config.Node) (Driver, error) {
 		return nil, fmt.Errorf("drivers: неизвестный тип ноды %q", node.Type)
 	}
 }
+

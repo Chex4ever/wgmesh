@@ -31,7 +31,7 @@ jobs:
           GOOS: windows
           GOARCH: amd64
         run: |
-          go build -ldflags "-s -w -X github.com/meshctl/meshctl/internal/cli.Version=${{ steps.get_version.outputs.VERSION }}" -o wgmesh.exe ./cmd/wgmesh
+          go build -ldflags "-s -w -X github.com/wgmesh/wgmesh/internal/cli.Version=${{ steps.get_version.outputs.VERSION }}" -o wgmesh.exe ./cmd/wgmesh
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -43,3 +43,4 @@ jobs:
             Автоматическая сборка бинарного файла wgmesh.exe для Windows.
           draft: false
           prerelease: false
+

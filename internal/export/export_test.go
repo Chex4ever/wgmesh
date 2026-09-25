@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/meshctl/meshctl/internal/config"
+	"github.com/wgmesh/wgmesh/internal/config"
 )
 
 func sampleMesh() *config.Mesh {
@@ -49,3 +49,4 @@ func TestExporters(t *testing.T) {
 		})
 	}
 }
+

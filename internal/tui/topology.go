@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/meshctl/meshctl/internal/config"
-	"github.com/meshctl/meshctl/internal/i18n"
+	"github.com/wgmesh/wgmesh/internal/config"
+	"github.com/wgmesh/wgmesh/internal/i18n"
 )
 
 var (
@@ -108,3 +108,4 @@ func indentBlock(s string, indent int) string {
 	}
 	return strings.Join(lines, "\n")
 }
+

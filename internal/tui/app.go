@@ -4,11 +4,12 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/meshctl/meshctl/internal/config"
-	"github.com/meshctl/meshctl/internal/i18n"
+	"github.com/wgmesh/wgmesh/internal/config"
+	"github.com/wgmesh/wgmesh/internal/i18n"
 )
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -36,6 +37,23 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
+	case ModalTickMsg:
+		if m.Modal.Type != ModalNone && m.Modal.IsAnimating {
+			elapsed := time.Since(m.Modal.AnimStartTime)
+			progress := float64(elapsed) / float64(m.Modal.AnimDuration)
+			if progress >= 1.0 {
+				m.Modal.AnimProgress = 1.0
+				m.Modal.IsAnimating = false
+				if m.Modal.IsClosing {
+					m.Modal = ModalState{Type: ModalNone}
+				}
+				return m, nil
+			}
+			m.Modal.AnimProgress = progress
+			return m, animateModalCmd()
+		}
+		return m, nil
+
 	case tea.WindowSizeMsg:
 		m.Width = msg.Width
 		m.Height = msg.Height
@@ -60,8 +78,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 
 		case "?":
-			m.Modal = ModalState{Type: ModalHelp}
-			return m, nil
+			cmd := m.openModal(ModalState{Type: ModalHelp})
+			return m, cmd
 
 		case "tab":
 			m.ActivePane = (m.ActivePane + 1) % 6
@@ -82,80 +100,93 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.runApply()
 
 		case "d":
-			m.runDoctor()
+			cmd := m.runDoctor()
+			return m, cmd
 
 		case "g":
-			m.openGitModal()
+			cmd := m.openGitModal()
+			return m, cmd
 
 		case "u":
 			cmd := m.openUpdateModal()
 			return m, cmd
 
 		case "b":
-			m.openBootstrapModal()
+			cmd := m.openBootstrapModal()
+			return m, cmd
 
 		case "n":
-			m.openAddNodeModal()
+			cmd := m.openAddNodeModal()
+			return m, cmd
 
 		case "r":
-			m.openAddRouteModal()
+			cmd := m.openAddRouteModal()
+			return m, cmd
 
 		case "c":
-			m.openAddClientModal()
+			cmd := m.openAddClientModal()
+			return m, cmd
 
 		case "l":
-			m.openAddListModal()
+			cmd := m.openAddListModal()
+			return m, cmd
 
 		case "e":
+			var cmd tea.Cmd
 			switch m.ActivePane {
 			case PaneNodes:
-				m.openEditNodeModal()
+				cmd = m.openEditNodeModal()
 			case PaneRoutes, PaneEditor, PaneTopology:
-				m.openEditRouteModal()
+				cmd = m.openEditRouteModal()
 			case PaneClients:
-				m.openEditClientModal()
+				cmd = m.openEditClientModal()
 			case PaneLists:
-				m.openEditListModal()
+				cmd = m.openEditListModal()
 			}
+			return m, cmd
 
 		case "delete", "x":
-			m.handleDeleteCurrent()
+			cmd := m.handleDeleteCurrent()
+			return m, cmd
 
 		case "t":
 			m.handleTeardownNode()
 
 		case "k":
-			m.handleCapabilities()
+			cmd := m.handleCapabilities()
+			return m, cmd
 
 		case "enter", "space":
+			var cmd tea.Cmd
 			switch m.ActivePane {
 			case PaneNodes:
 				if m.SelectedNode == len(m.Mesh.Nodes) {
-					m.openAddNodeModal()
+					cmd = m.openAddNodeModal()
 				} else if m.SelectedNode == len(m.Mesh.Nodes)+1 {
-					m.openBootstrapModal()
+					cmd = m.openBootstrapModal()
 				} else {
-					m.openEditNodeModal()
+					cmd = m.openEditNodeModal()
 				}
 			case PaneRoutes:
 				if m.SelectedRoute == len(m.Mesh.Routes) {
-					m.openAddRouteModal()
+					cmd = m.openAddRouteModal()
 				} else {
-					m.openEditRouteModal()
+					cmd = m.openEditRouteModal()
 				}
 			case PaneClients:
 				if m.SelectedClient == len(m.Mesh.Clients) {
-					m.openAddClientModal()
+					cmd = m.openAddClientModal()
 				} else {
-					m.openEditClientModal()
+					cmd = m.openEditClientModal()
 				}
 			case PaneLists:
 				if m.SelectedList == len(m.Mesh.Lists) {
-					m.openAddListModal()
+					cmd = m.openAddListModal()
 				} else {
-					m.openEditListModal()
+					cmd = m.openEditListModal()
 				}
 			}
+			return m, cmd
 
 		case "up":
 			m.moveSelection(-1)
@@ -224,6 +255,10 @@ func (m *Model) moveSelection(delta int) {
 }
 
 func (m *Model) handleModalKey(key string) (Model, tea.Cmd) {
+	if m.Modal.IsClosing {
+		return *m, nil
+	}
+
 	normKey := normalizeKey(key)
 
 	if len(m.Modal.Fields) > 0 && m.Modal.ActiveField < len(m.Modal.Fields) {
@@ -242,23 +277,32 @@ func (m *Model) handleModalKey(key string) (Model, tea.Cmd) {
 		}
 	}
 
-	switch key {
+	switch normKey {
 	case "esc":
-		m.Modal = ModalState{Type: ModalNone}
-		return *m, nil
+		cmd := m.closeModal()
+		return *m, cmd
 
-	case "y", "Y":
+	case "q":
+		if len(m.Modal.Fields) == 0 {
+			cmd := m.closeModal()
+			return *m, cmd
+		}
+
+	case "y":
 		if m.Modal.Type == ModalConfirm && m.Modal.OnConfirm != nil {
 			m.Modal.OnConfirm(m)
-			m.Modal = ModalState{Type: ModalNone}
 		}
-		return *m, nil
+		cmd := m.closeModal()
+		return *m, cmd
 
-	case "n", "N":
+	case "n":
 		if m.Modal.Type == ModalConfirm {
-			m.Modal = ModalState{Type: ModalNone}
+			cmd := m.closeModal()
+			return *m, cmd
 		}
+	}
 
+	switch key {
 	case "tab", "down":
 		if len(m.Modal.Fields) > 0 {
 			m.Modal.ActiveField = (m.Modal.ActiveField + 1) % len(m.Modal.Fields)
@@ -298,9 +342,12 @@ func (m *Model) handleModalKey(key string) (Model, tea.Cmd) {
 	default:
 		if m.Modal.Type == ModalExport {
 			switch normKey {
-			case "w", "a", "s", "u", "q":
+			case "w", "a", "s", "u":
 				m.handleExportFormat(normKey)
 				return *m, nil
+			case "q":
+				cmd := m.closeModal()
+				return *m, cmd
 			}
 		}
 
@@ -322,13 +369,12 @@ func (m *Model) submitCurrentModal() tea.Cmd {
 			m.Modal.UpdateStatus = i18n.T("update_installing")
 			return performUpdateCmd(m.Modal.DownloadURL)
 		}
-		return nil
+		return m.closeModal()
 	}
-	m.submitFormModal()
-	return nil
+	return m.submitFormModal()
 }
 
-func (m *Model) submitFormModal() {
+func (m *Model) submitFormModal() tea.Cmd {
 	switch m.Modal.Type {
 	case ModalBootstrapNode, ModalAddNode:
 		name := m.getFieldValue("Имя ноды")
@@ -340,11 +386,11 @@ func (m *Model) submitFormModal() {
 
 		if name == "" || host == "" {
 			m.LogMsg = "[!] Ошибка: укажите имя и IP ноды"
-			return
+			return nil
 		}
 		if m.isNodeNameTaken(name, -1) {
 			m.LogMsg = fmt.Sprintf("[!] Ошибка: Имя ноды %q уже занято! Укажите уникальное имя.", name)
-			return
+			return nil
 		}
 		if user == "" {
 			user = "root"
@@ -358,14 +404,14 @@ func (m *Model) submitFormModal() {
 			kp, pubStr, err := ensureDefaultSSHKeyTUI()
 			if err != nil {
 				m.LogMsg = fmt.Sprintf("Ошибка ключа SSH: %v", err)
-				return
+				return nil
 			}
 			keyPath = kp
 			if pass != "" {
 				m.LogMsg = fmt.Sprintf("-> Провижининг SSH-ключа на %s@%s...", user, host)
 				if err := installRemoteKeyTUI(host, 22, user, pass, keyPath, pubStr, nType); err != nil {
 					m.LogMsg = fmt.Sprintf("Ошибка установки SSH-ключа на удаленный хост: %v", err)
-					return
+					return nil
 				}
 			}
 		}
@@ -384,12 +430,11 @@ func (m *Model) submitFormModal() {
 		m.IsDirty = true
 		_ = config.Save(m.ConfigPath, m.Mesh)
 		m.LogMsg = fmt.Sprintf("[OK] Нода %q (%s) успешно добавлена!", name, host)
-		m.Modal = ModalState{Type: ModalNone}
+		return m.closeModal()
 
 	case ModalEditNode:
 		if m.SelectedNode < 0 || m.SelectedNode >= len(m.Mesh.Nodes) {
-			m.Modal = ModalState{Type: ModalNone}
-			return
+			return m.closeModal()
 		}
 		oldNode := &m.Mesh.Nodes[m.SelectedNode]
 		oldName := oldNode.Name
@@ -403,11 +448,11 @@ func (m *Model) submitFormModal() {
 
 		if newName == "" || host == "" {
 			m.LogMsg = "[!] Ошибка: имя и IP ноды не могут быть пустыми!"
-			return
+			return nil
 		}
 		if m.isNodeNameTaken(newName, m.SelectedNode) {
 			m.LogMsg = fmt.Sprintf("[!] Ошибка: Имя ноды %q уже занято!", newName)
-			return
+			return nil
 		}
 		if user == "" {
 			user = "root"
@@ -422,7 +467,7 @@ func (m *Model) submitFormModal() {
 				m.LogMsg = fmt.Sprintf("-> Провижининг SSH-ключа на %s@%s...", user, host)
 				if err := installRemoteKeyTUI(host, 22, user, pass, kp, pubStr, nType); err != nil {
 					m.LogMsg = fmt.Sprintf("[!] Ошибка установки SSH-ключа: %v", err)
-					return
+					return nil
 				}
 			}
 		}
@@ -447,13 +492,13 @@ func (m *Model) submitFormModal() {
 		} else {
 			m.LogMsg = fmt.Sprintf("[OK] Настройки ноды %q сохранены!", newName)
 		}
-		m.Modal = ModalState{Type: ModalNone}
+		return m.closeModal()
 
 	case ModalAddRoute, ModalEditRoute:
 		name := m.getFieldValue("Имя маршрута")
 		if name == "" {
 			m.LogMsg = "[!] Ошибка: имя маршрута не может быть пустым!"
-			return
+			return nil
 		}
 		excludeIdx := -1
 		if m.Modal.Type == ModalEditRoute {
@@ -461,7 +506,7 @@ func (m *Model) submitFormModal() {
 		}
 		if m.isRouteNameTaken(name, excludeIdx) {
 			m.LogMsg = fmt.Sprintf("[!] Ошибка: Имя маршрута %q уже занято!", name)
-			return
+			return nil
 		}
 
 		var hops []string
@@ -477,7 +522,7 @@ func (m *Model) submitFormModal() {
 
 		if len(hops) == 1 {
 			m.LogMsg = "[!] Ошибка: выберите хотя бы один узел в маршруте!"
-			return
+			return nil
 		}
 
 		exit := m.getFieldValue("Выходной узел")
@@ -508,7 +553,7 @@ func (m *Model) submitFormModal() {
 		}
 		m.IsDirty = true
 		_ = config.Save(m.ConfigPath, m.Mesh)
-		m.Modal = ModalState{Type: ModalNone}
+		return m.closeModal()
 
 	case ModalAddClient:
 		name := m.getFieldValue("Имя клиента (устройства)")
@@ -516,7 +561,7 @@ func (m *Model) submitFormModal() {
 		if name != "" {
 			if m.isClientNameTaken(name, -1) {
 				m.LogMsg = fmt.Sprintf("[!] Ошибка: Имя клиента %q уже занято!", name)
-				return
+				return nil
 			}
 			if strings.HasPrefix(ingress, "(") {
 				ingress = ""
@@ -530,12 +575,11 @@ func (m *Model) submitFormModal() {
 			_ = config.Save(m.ConfigPath, m.Mesh)
 			m.LogMsg = fmt.Sprintf("[OK] Клиент %q добавлен", name)
 		}
-		m.Modal = ModalState{Type: ModalNone}
+		return m.closeModal()
 
 	case ModalEditClient:
 		if m.SelectedClient < 0 || m.SelectedClient >= len(m.Mesh.Clients) {
-			m.Modal = ModalState{Type: ModalNone}
-			return
+			return m.closeModal()
 		}
 		oldClient := &m.Mesh.Clients[m.SelectedClient]
 		newName := m.getFieldValue("Имя клиента (устройства)")
@@ -543,11 +587,11 @@ func (m *Model) submitFormModal() {
 
 		if newName == "" {
 			m.LogMsg = "[!] Ошибка: имя клиента не может быть пустым!"
-			return
+			return nil
 		}
 		if m.isClientNameTaken(newName, m.SelectedClient) {
 			m.LogMsg = fmt.Sprintf("[!] Ошибка: Имя клиента %q уже занято!", newName)
-			return
+			return nil
 		}
 		if strings.HasPrefix(ingress, "(") {
 			ingress = ""
@@ -558,7 +602,7 @@ func (m *Model) submitFormModal() {
 		m.IsDirty = true
 		_ = config.Save(m.ConfigPath, m.Mesh)
 		m.LogMsg = fmt.Sprintf("[OK] Настройки клиента %q сохранены!", newName)
-		m.Modal = ModalState{Type: ModalNone}
+		return m.closeModal()
 
 	case ModalAddList:
 		name := m.getFieldValue("Имя списка")
@@ -566,7 +610,7 @@ func (m *Model) submitFormModal() {
 		if name != "" {
 			if m.isListNameTaken(name, -1) {
 				m.LogMsg = fmt.Sprintf("[!] Ошибка: Имя списка %q уже занято!", name)
-				return
+				return nil
 			}
 			doms := splitTrimTUI(domStr)
 			l := config.DomainList{
@@ -578,12 +622,11 @@ func (m *Model) submitFormModal() {
 			_ = config.Save(m.ConfigPath, m.Mesh)
 			m.LogMsg = fmt.Sprintf("[OK] Список доменов %q добавлен", name)
 		}
-		m.Modal = ModalState{Type: ModalNone}
+		return m.closeModal()
 
 	case ModalEditList:
 		if m.SelectedList < 0 || m.SelectedList >= len(m.Mesh.Lists) {
-			m.Modal = ModalState{Type: ModalNone}
-			return
+			return m.closeModal()
 		}
 		oldList := &m.Mesh.Lists[m.SelectedList]
 		newName := m.getFieldValue("Имя списка")
@@ -591,11 +634,11 @@ func (m *Model) submitFormModal() {
 
 		if newName == "" {
 			m.LogMsg = "[!] Ошибка: имя списка не может быть пустым!"
-			return
+			return nil
 		}
 		if m.isListNameTaken(newName, m.SelectedList) {
 			m.LogMsg = fmt.Sprintf("[!] Ошибка: Имя списка %q уже занято!", newName)
-			return
+			return nil
 		}
 
 		oldList.Name = newName
@@ -603,12 +646,12 @@ func (m *Model) submitFormModal() {
 		m.IsDirty = true
 		_ = config.Save(m.ConfigPath, m.Mesh)
 		m.LogMsg = fmt.Sprintf("[OK] Настройки списка %q сохранены!", newName)
-		m.Modal = ModalState{Type: ModalNone}
+		return m.closeModal()
 
 	case ModalGit:
 		msg := m.getFieldValue("Сообщение коммита")
 		if msg == "" {
-			msg = "update meshctl configuration"
+			msg = "update wgmesh configuration"
 		}
 		out, err := exec.Command("git", "commit", "-am", msg).CombinedOutput()
 		if err != nil {
@@ -621,8 +664,9 @@ func (m *Model) submitFormModal() {
 				m.LogMsg = "[OK] Изменения успешно закоммичены и отправлены в Git (push)!"
 			}
 		}
-		m.Modal = ModalState{Type: ModalNone}
+		return m.closeModal()
 	}
+	return m.closeModal()
 }
 
 func (m *Model) getFieldValue(prefix string) string {
@@ -636,3 +680,4 @@ func (m *Model) getFieldValue(prefix string) string {
 	}
 	return ""
 }
+

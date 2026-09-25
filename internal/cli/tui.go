@@ -6,8 +6,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
 
-	"github.com/meshctl/meshctl/internal/config"
-	"github.com/meshctl/meshctl/internal/tui"
+	"github.com/wgmesh/wgmesh/internal/config"
+	"github.com/wgmesh/wgmesh/internal/tui"
 )
 
 func runTUICmd(cmd *cobra.Command, args []string) error {
@@ -18,7 +18,7 @@ func runTUICmd(cmd *cobra.Command, args []string) error {
 	}
 
 	model := tui.NewModel(m, cfgPath, Version)
-	p := tea.NewProgram(model, tea.WithAltScreen(), tea.WithMouseCellMotion())
+	p := tea.NewProgram(model, tea.WithAltScreen(), tea.WithMouseAllMotion())
 
 	if _, err := p.Run(); err != nil {
 		return fmt.Errorf("ошибка TUI: %w", err)
@@ -35,3 +35,4 @@ func tuiCmd() *cobra.Command {
 		RunE:  runTUICmd,
 	}
 }
+

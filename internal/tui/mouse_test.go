@@ -1,11 +1,12 @@
 package tui
 
 import (
+	"strings"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/meshctl/meshctl/internal/config"
+	"github.com/wgmesh/wgmesh/internal/config"
 )
 
 func TestMouseHandlingPanes(t *testing.T) {
@@ -202,3 +203,21 @@ func TestMouseHoverPressReleaseStates(t *testing.T) {
 		t.Errorf("Expected IsMousePressed=false on Release")
 	}
 }
+
+func TestModalViewOutput(t *testing.T) {
+	mesh := &config.Mesh{
+		Name: "TestMesh",
+		Nodes: []config.Node{
+			{Name: "node1", Host: "1.1.1.1"},
+		},
+	}
+	model := NewModel(mesh, "mesh.yaml")
+	model.Width = 100
+	model.Height = 30
+	model.openAddNodeModal()
+
+	v := model.View()
+	t.Logf("View output lines count: %d", len(strings.Split(v, "\n")))
+	t.Logf("View output first 3 lines:\n%s", strings.Join(strings.Split(v, "\n")[:3], "\n"))
+}
+

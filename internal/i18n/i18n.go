@@ -143,6 +143,7 @@ var translations = map[string]map[string]string{
 		"status_unsaved":       " * [UNSAVED - press 's']",
 
 		// Log Messages
+		"log_idle":             "System ready. Awaiting commands.",
 		"log_saved":            "[OK] Configuration successfully saved to %s",
 		"log_save_err":         "Save error: %v",
 		"log_applying":         "-> Running full SSH Apply...",
@@ -237,6 +238,7 @@ var translations = map[string]map[string]string{
 		"status_unsaved":       " * [НЕ СОХРАНЕНО — нажмите 's']",
 
 		// Log Messages
+		"log_idle":             "Система готова к работе. Ожидание команд.",
 		"log_saved":            "[OK] Конфигурация успешно сохранена в %s",
 		"log_save_err":         "Ошибка сохранения: %v",
 		"log_applying":         "-> Запуск полного применения (Apply) по SSH...",

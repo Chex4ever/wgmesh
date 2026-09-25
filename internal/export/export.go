@@ -3,7 +3,7 @@ package export
 import (
 	"fmt"
 
-	"github.com/meshctl/meshctl/internal/config"
+	"github.com/wgmesh/wgmesh/internal/config"
 )
 
 // Exporter — интерфейс генератора клиентских профилей.
@@ -33,3 +33,4 @@ func Formats() []string {
 	}
 	return list
 }
+

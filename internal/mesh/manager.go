@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/meshctl/meshctl/internal/config"
-	"github.com/meshctl/meshctl/internal/wg"
+	"github.com/wgmesh/wgmesh/internal/config"
+	"github.com/wgmesh/wgmesh/internal/wg"
 )
 
 // Manager — core-логика применения конфигурации к нодам.
@@ -48,7 +48,7 @@ func (mgr *Manager) EnsureIPs() (int, error) {
 	}
 	base := ipnet.IP.To4()
 	if base == nil {
-		return 0, fmt.Errorf("meshctl: пока поддерживаются только IPv4 CIDR")
+		return 0, fmt.Errorf("wgmesh: пока поддерживаются только IPv4 CIDR")
 	}
 	used := map[string]bool{}
 	for _, node := range mgr.Mesh.Nodes {
@@ -66,7 +66,7 @@ func (mgr *Manager) EnsureIPs() (int, error) {
 		for used[fmt.Sprintf("%d.%d.%d.%d", base[0], base[1], base[2], next)] {
 			next++
 			if next == 0 {
-				return assigned, fmt.Errorf("meshctl: в подсети закончились свободные адреса")
+				return assigned, fmt.Errorf("wgmesh: в подсети закончились свободные адреса")
 			}
 		}
 		node.MeshIP = fmt.Sprintf("%d.%d.%d.%d", base[0], base[1], base[2], next)
@@ -172,3 +172,4 @@ func parseIPv4Prefix(cidr string) (net.IP, error) {
 	}
 	return ip.To4(), nil
 }
+

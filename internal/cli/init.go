@@ -5,10 +5,10 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/meshctl/meshctl/internal/config"
+	"github.com/wgmesh/wgmesh/internal/config"
 )
 
-// initCmd — `meshctl init`: создаёт mesh.yaml с дефолтной конфигурацией.
+// initCmd — `wgmesh init`: создаёт mesh.yaml с дефолтной конфигурацией.
 func initCmd() *cobra.Command {
 	var name string
 	cmd := &cobra.Command{
@@ -36,3 +36,4 @@ func initCmd() *cobra.Command {
 	cmd.Flags().StringVar(&name, "name", "", "название сети")
 	return cmd
 }
+

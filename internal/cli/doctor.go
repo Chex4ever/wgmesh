@@ -10,8 +10,8 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh"
 
-	"github.com/meshctl/meshctl/internal/config"
-	"github.com/meshctl/meshctl/internal/mesh"
+	"github.com/wgmesh/wgmesh/internal/config"
+	"github.com/wgmesh/wgmesh/internal/mesh"
 )
 
 type doctorCheck struct {
@@ -262,3 +262,4 @@ func printCheckResults(checks []doctorCheck) {
 		fmt.Printf("[%s] %-12s | %-32s: %s\n", symbol, c.Category, c.Name, c.Detail)
 	}
 }
+

@@ -5,7 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/meshctl/meshctl/internal/updater"
+	"github.com/wgmesh/wgmesh/internal/updater"
 )
 
 func updateCmd() *cobra.Command {
@@ -35,3 +35,4 @@ func updateCmd() *cobra.Command {
 		},
 	}
 }
+

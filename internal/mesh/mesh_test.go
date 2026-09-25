@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/meshctl/meshctl/internal/config"
+	"github.com/wgmesh/wgmesh/internal/config"
 )
 
 // validMesh — базовая корректная конфигурация из двух нод и multihop-маршрута.
@@ -191,3 +191,4 @@ func TestValidateProtected(t *testing.T) {
 		t.Fatalf("валидация защищенных объектов провалена: %v", err)
 	}
 }
+

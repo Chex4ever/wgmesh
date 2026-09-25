@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/meshctl/meshctl/internal/config"
-	"github.com/meshctl/meshctl/internal/wg"
+	"github.com/wgmesh/wgmesh/internal/config"
+	"github.com/wgmesh/wgmesh/internal/wg"
 )
 
 type URIExporter struct{}
@@ -49,3 +49,4 @@ func (e *URIExporter) Render(m *config.Mesh, route *config.Route, client *config
 
 	return []byte(uriStr + "\n"), nil
 }
+

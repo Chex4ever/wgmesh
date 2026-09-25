@@ -4,7 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/meshctl/meshctl/internal/config"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/wgmesh/wgmesh/internal/config"
 )
 
 func (m *Model) isClientNameTaken(name string, excludeIdx int) bool {
@@ -26,20 +27,20 @@ func (m *Model) nextDefaultClientName() string {
 	return "client_99"
 }
 
-func (m *Model) openAddClientModal() {
+func (m *Model) openAddClientModal() tea.Cmd {
 	nodeNames := m.nodeNamesList()
-	m.Modal = ModalState{
+	return m.openModal(ModalState{
 		Type: ModalAddClient,
 		Fields: []FormField{
 			{Label: "Имя клиента (устройства)", Value: m.nextDefaultClientName()},
 			{Label: "Нода подключения (Ingress)", Options: nodeNames, OptionIdx: 0, Value: nodeNames[0]},
 		},
-	}
+	})
 }
 
-func (m *Model) openEditClientModal() {
+func (m *Model) openEditClientModal() tea.Cmd {
 	if len(m.Mesh.Clients) == 0 || m.SelectedClient < 0 || m.SelectedClient >= len(m.Mesh.Clients) {
-		return
+		return nil
 	}
 	c := &m.Mesh.Clients[m.SelectedClient]
 	nodeNames := m.nodeNamesList()
@@ -50,13 +51,13 @@ func (m *Model) openEditClientModal() {
 			break
 		}
 	}
-	m.Modal = ModalState{
+	return m.openModal(ModalState{
 		Type: ModalEditClient,
 		Fields: []FormField{
 			{Label: "Имя клиента (устройства)", Value: c.Name},
 			{Label: "Нода подключения (Ingress)", Options: nodeNames, OptionIdx: ingOpt, Value: nodeNames[ingOpt]},
 		},
-	}
+	})
 }
 
 func (m *Model) isListNameTaken(name string, excludeIdx int) bool {
@@ -78,65 +79,63 @@ func (m *Model) nextDefaultListName() string {
 	return "list_99"
 }
 
-func (m *Model) openAddListModal() {
-	m.Modal = ModalState{
+func (m *Model) openAddListModal() tea.Cmd {
+	return m.openModal(ModalState{
 		Type: ModalAddList,
 		Fields: []FormField{
 			{Label: "Имя списка", Value: m.nextDefaultListName()},
 			{Label: "Домены (через запятую)", Placeholder: "youtube.com, *.googlevideo.com"},
 		},
-	}
+	})
 }
 
-func (m *Model) openEditListModal() {
+func (m *Model) openEditListModal() tea.Cmd {
 	if len(m.Mesh.Lists) == 0 || m.SelectedList < 0 || m.SelectedList >= len(m.Mesh.Lists) {
-		return
+		return nil
 	}
 	l := &m.Mesh.Lists[m.SelectedList]
-	m.Modal = ModalState{
+	return m.openModal(ModalState{
 		Type: ModalEditList,
 		Fields: []FormField{
 			{Label: "Имя списка", Value: l.Name},
 			{Label: "Домены (через запятую)", Value: strings.Join(l.Domains, ", ")},
 		},
-	}
+	})
 }
 
-func (m *Model) handleDeleteCurrent() {
+func (m *Model) handleDeleteCurrent() tea.Cmd {
 	switch m.ActivePane {
 	case PaneNodes:
 		if len(m.Mesh.Nodes) == 0 || m.SelectedNode >= len(m.Mesh.Nodes) {
-			return
+			return nil
 		}
 		node := &m.Mesh.Nodes[m.SelectedNode]
 		idx := m.SelectedNode
 		if node.Protected {
-			m.Modal = ModalState{
+			return m.openModal(ModalState{
 				Type:          ModalConfirm,
 				ConfirmPrompt: fmt.Sprintf("Нода %q помечена как защищённая (protected: true)! Вы действительно хотите её удалить?", node.Name),
 				OnConfirm: func(mod *Model) {
 					mod.removeNodeByIdx(idx)
 				},
-			}
-			return
+			})
 		}
 		m.removeNodeByIdx(idx)
 
 	case PaneRoutes:
 		if len(m.Mesh.Routes) == 0 || m.SelectedRoute >= len(m.Mesh.Routes) {
-			return
+			return nil
 		}
 		r := &m.Mesh.Routes[m.SelectedRoute]
 		idx := m.SelectedRoute
 		if r.Protected {
-			m.Modal = ModalState{
+			return m.openModal(ModalState{
 				Type:          ModalConfirm,
-				ConfirmPrompt: fmt.Sprintf("Маршрут %q помечен как защищённый (protected: true)! Вы действительно хотите его удалить?", r.Name),
+				ConfirmPrompt: fmt.Sprintf("Маршрут %q помечен как защищённый (protected: true)! Вы действительно хотите его отредактировать?", r.Name),
 				OnConfirm: func(mod *Model) {
 					mod.removeRouteByIdx(idx)
 				},
-			}
-			return
+			})
 		}
 		m.removeRouteByIdx(idx)
 
@@ -158,4 +157,6 @@ func (m *Model) handleDeleteCurrent() {
 			m.LogMsg = fmt.Sprintf("[OK] Список %q удалён", lName)
 		}
 	}
+	return nil
 }
+

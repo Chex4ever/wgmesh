@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/meshctl/meshctl/internal/config"
-	"github.com/meshctl/meshctl/internal/wg"
+	"github.com/wgmesh/wgmesh/internal/config"
+	"github.com/wgmesh/wgmesh/internal/wg"
 )
 
 // Validate выполняет полную валидацию mesh-конфига:
@@ -193,3 +193,4 @@ func CheckReachability(m *config.Mesh, timeout time.Duration) map[string]error {
 	}
 	return res
 }
+

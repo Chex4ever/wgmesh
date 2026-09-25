@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/meshctl/meshctl/internal/config"
-	"github.com/meshctl/meshctl/internal/wg"
+	"github.com/wgmesh/wgmesh/internal/config"
+	"github.com/wgmesh/wgmesh/internal/wg"
 )
 
 type WireGuardExporter struct{}
@@ -66,3 +66,4 @@ func (e *WireGuardExporter) Render(m *config.Mesh, route *config.Route, client *
 
 	return []byte(strings.TrimSpace(out) + "\n"), nil
 }
+

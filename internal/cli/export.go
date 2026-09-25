@@ -7,8 +7,8 @@ import (
 	"github.com/skip2/go-qrcode"
 	"github.com/spf13/cobra"
 
-	"github.com/meshctl/meshctl/internal/config"
-	"github.com/meshctl/meshctl/internal/export"
+	"github.com/wgmesh/wgmesh/internal/config"
+	"github.com/wgmesh/wgmesh/internal/export"
 )
 
 func exportCmd() *cobra.Command {
@@ -77,3 +77,4 @@ func exportCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&showQR, "qr", false, "показать ASCII QR-код в терминале")
 	return cmd
 }
+

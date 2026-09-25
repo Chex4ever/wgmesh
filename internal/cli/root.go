@@ -1,4 +1,4 @@
-// Package cli — команды meshctl (Cobra).
+// Package cli — команды wgmesh (Cobra).
 package cli
 
 import (
@@ -6,8 +6,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/meshctl/meshctl/internal/config"
-	"github.com/meshctl/meshctl/internal/i18n"
+	"github.com/wgmesh/wgmesh/internal/config"
+	"github.com/wgmesh/wgmesh/internal/i18n"
 )
 
 // cfgPath — путь к главному конфигу, флаг --config.
@@ -22,7 +22,7 @@ func Execute() {
 
 	root := &cobra.Command{
 		Use:   "wgmesh",
-		Short: "wgmesh — менеджер WireGuard mesh-сетей (multihop exit-маршруты)",
+		Short: "wgmesh (Warp Gateway Mesh) — менеджер WireGuard mesh-сетей (multihop exit-маршруты)",
 		Long: `wgmesh управляет одноранговой mesh-сетью из WireGuard-нод
 (Linux / Mikrotik / OpenWRT): YAML-конфиги в Git, маршруты через
 несколько хопов, один бинарник без центрального сервера.`,
@@ -91,3 +91,4 @@ func loadMesh() (*config.Mesh, error) {
 func saveMesh(m *config.Mesh) error {
 	return config.Save(cfgPath, m)
 }
+
