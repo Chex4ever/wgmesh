@@ -15,10 +15,12 @@ var (
 				Bold(true)
 
 	normalRouteStyle = lipgloss.NewStyle().
-				Foreground(lipgloss.Color("240"))
+				Foreground(lipgloss.Color("250"))
 
 	boxStyle = lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
+			BorderForeground(lipgloss.Color("244")).
+			Foreground(lipgloss.Color("252")).
 			Padding(0, 1)
 
 	selectedBoxStyle = lipgloss.NewStyle().
@@ -28,7 +30,7 @@ var (
 				Bold(true).
 				Padding(0, 1)
 
-	arrowStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("244"))
+	arrowStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("86"))
 )
 
 // RenderTopology строит ASCII-визуализацию маршрутов и топологии сети.

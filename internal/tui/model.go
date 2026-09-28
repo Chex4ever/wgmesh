@@ -227,7 +227,11 @@ func (m Model) View() string {
 		Render(i18n.T("topology_title", m.Mesh.Name, m.Version))
 
 	topView := RenderTopology(m.Mesh, m.SelectedRoute, g.totalWidth)
-	topBox := paneStyle.Width(g.totalWidth).Render(header + "\n\n" + topView)
+	topStyle := paneStyle
+	if m.ActivePane == PaneTopology {
+		topStyle = activePaneStyle
+	}
+	topBox := topStyle.Width(g.totalWidth).Render(header + "\n\n" + topView)
 
 	hoverNodesIdx := -1
 	hoverRoutesIdx := -1

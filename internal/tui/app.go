@@ -540,6 +540,17 @@ func (m *Model) submitFormModal() tea.Cmd {
 				Protected: isProt,
 			}
 			m.Mesh.Routes = append(m.Mesh.Routes, r)
+			m.SelectedRoute = len(m.Mesh.Routes) - 1
+			m.Editor.RouteIdx = m.SelectedRoute
+
+			// Если клиентов ещё нет — автоматическое создание первого дефолтного клиента для удобства (UX)
+			if len(m.Mesh.Clients) == 0 {
+				m.Mesh.Clients = append(m.Mesh.Clients, config.Client{
+					Name:    "client_01",
+					Ingress: "",
+				})
+			}
+
 			m.LogMsg = fmt.Sprintf("[OK] Маршрут %q создан", name)
 		} else {
 			if m.SelectedRoute >= 0 && m.SelectedRoute < len(m.Mesh.Routes) {

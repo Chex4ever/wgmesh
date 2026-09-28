@@ -119,6 +119,8 @@ var translations = map[string]map[string]string{
 	"en": {
 		// Header & Panes
 		"topology_title":        "=== Network Topology: %s (version %s) ===",
+		"topology_empty_nodes":  "[Step 1] Add your server: Press 'b' (SSH Bootstrap) or 'n' (Add Node)",
+		"topology_empty_routes": "[Step 2] Create a route: Press 'r' to route 100% traffic through server",
 		"pane_nodes":           "Node List (Nodes):",
 		"pane_routes":          "Route List (Routes):",
 		"pane_clients":         "Client List (Clients):",
@@ -214,6 +216,8 @@ var translations = map[string]map[string]string{
 	"ru": {
 		// Header & Panes
 		"topology_title":        "=== Топология сети: %s (версия %s) ===",
+		"topology_empty_nodes":  "[Шаг 1] Добавьте ваш сервер: Нажмите 'b' (SSH Bootstrap) или 'n' (Добавить ноду)",
+		"topology_empty_routes": "[Шаг 2] Создайте маршрут: Нажмите 'r' для проброса 100% трафика через сервер",
 		"pane_nodes":           "Список узлов (Nodes):",
 		"pane_routes":          "Список маршрутов (Routes):",
 		"pane_clients":         "Список клиентов (Clients):",
